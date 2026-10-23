@@ -1,0 +1,10 @@
+{
+  "bootstrap5": {
+    "basic": {
+      "primary": "#0DFABA",
+      "success": "#19c664",
+      "danger": "#ef0715"
+    },
+    "advanced": {}
+  }
+}

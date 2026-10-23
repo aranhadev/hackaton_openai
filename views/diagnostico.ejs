@@ -1,0 +1,223 @@
+<!-- Wappler include head-page="layouts/main" fontawesome_5="cdn" bootstrap5="local" is="dmx-app" id="diagnostico" appConnect="local" bootstrap_icons="local" components="{dmxFormatter:{}}" -->
+<meta name="ac:route" content="/diagnostico">
+<dmx-value id="page_title" value="Diagnóstico"></dmx-value>
+
+<!-- Fluxo (contrato em docs/spec-diagnostico.md):
+     start → (question → answer) até question devolver done → finish.
+     etapa: 'intro' | 'quiz' | 'finalizando' | 'fim'. O aluno vem do login (security_db), a página não manda user_id. -->
+<dmx-value id="etapa" value="intro"></dmx-value>
+<dmx-value id="attempt_id"></dmx-value>
+<dmx-value id="sel"></dmx-value>
+<dmx-value id="erro"></dmx-value>
+<dmx-value id="precisa_login" dmx-bind:value="false"></dmx-value>
+
+<dmx-serverconnect id="sc_start" url="/api/diagnostic/start" method="post" noload
+  dmx-on:start="erro.setValue('')"
+  dmx-on:success="attempt_id.setValue(sc_start.data.attempt_id);etapa.setValue('quiz');sc_question.load({attempt_id: sc_start.data.attempt_id})"
+  dmx-on:unauthorized="precisa_login.setValue(true)"
+  dmx-on:error="erro.setValue('Não deu para começar o diagnóstico. Tente de novo.')"></dmx-serverconnect>
+
+<dmx-serverconnect id="sc_question" url="/api/diagnostic/question" noload
+  dmx-on:success="sc_question.data.done ? sc_finish.load() : sel.setValue('')"
+  dmx-on:unauthorized="precisa_login.setValue(true)"
+  dmx-on:error="erro.setValue('Não deu para carregar a próxima questão.')"></dmx-serverconnect>
+
+<dmx-serverconnect id="sc_answer" url="/api/diagnostic/answer" method="post" noload
+  dmx-bind:data="{attempt_id: attempt_id.value, question_id: sc_question.data.query_next[0].id, option_id: sel.value}"
+  dmx-on:start="erro.setValue('')"
+  dmx-on:success="sc_question.load({attempt_id: attempt_id.value})"
+  dmx-on:unauthorized="precisa_login.setValue(true)"
+  dmx-on:invalid="erro.setValue('Resposta inválida. Escolha uma alternativa.')"
+  dmx-on:error="erro.setValue('Não deu para salvar a resposta. Tente de novo.')"></dmx-serverconnect>
+
+<!-- finish chama a OpenAI: pode levar alguns segundos -->
+<dmx-serverconnect id="sc_finish" url="/api/diagnostic/finish" method="post" noload
+  dmx-bind:data="{attempt_id: attempt_id.value}"
+  dmx-on:start="etapa.setValue('finalizando')"
+  dmx-on:success="etapa.setValue('fim')"
+  dmx-on:unauthorized="precisa_login.setValue(true)"
+  dmx-on:error="etapa.setValue('quiz');erro.setValue('Não deu para montar sua trilha. Tente finalizar de novo.')"></dmx-serverconnect>
+
+<div class="app-page">
+
+  <!-- Erro geral -->
+  <div class="app-callout is-danger" dmx-show="erro.value">
+    <i class="bi bi-exclamation-triangle"></i>
+    <div class="flex-grow-1" dmx-text="erro.value"></div>
+    <button class="btn btn-sm btn-ghost" dmx-show="etapa.value == 'quiz' &amp;&amp; sc_question.data.done" dmx-on:click="sc_finish.load()">Finalizar</button>
+  </div>
+
+  <!-- Login (a action exige aluno logado) -->
+  <div class="card app-card" dmx-show="precisa_login.value" style="max-width: 440px;">
+    <div>
+      <p class="app-eyebrow">Entrar</p>
+      <h2 class="app-section-title">Faça login para fazer o diagnóstico</h2>
+      <p class="app-subtitle">Seu resultado e sua trilha ficam salvos no seu usuário.</p>
+    </div>
+    <form is="dmx-serverconnect-form" id="form_login" method="post" action="/api/auth/login" class="d-flex flex-column gap-3"
+      dmx-on:success="precisa_login.setValue(false);form_login.reset();sc_me.load();sc_start.load()"
+      dmx-on:unauthorized="erro.setValue('Usuário ou senha incorretos.')">
+      <div>
+        <label class="form-label" for="login_username">Usuário</label>
+        <input class="form-control" id="login_username" name="username" required autocomplete="username">
+      </div>
+      <div>
+        <label class="form-label" for="login_password">Senha</label>
+        <input class="form-control" id="login_password" name="password" type="password" required autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary align-self-start" type="submit" dmx-bind:disabled="form_login.state.executing">Entrar e começar</button>
+    </form>
+  </div>
+
+  <!-- ============ 1. Intro ============ -->
+  <div dmx-show="etapa.value == 'intro' &amp;&amp; !precisa_login.value" class="d-flex flex-column gap-3">
+    <div class="app-hero">
+      <p class="app-eyebrow">Diagnóstico</p>
+      <h1 class="app-title">Descubra seu nível em C</h1>
+      <p class="app-subtitle">Algumas questões curtas sobre ponteiros, gerenciamento de memória e algoritmos. Não vale nota: o resultado só decide por onde sua trilha começa.</p>
+      <div class="app-hero-actions">
+        <button class="btn btn-primary btn-lg" dmx-on:click="sc_start.load()" dmx-bind:disabled="sc_start.state.executing">
+          <span class="spinner-border spinner-border-sm me-2" dmx-show="sc_start.state.executing"></span><i class="bi bi-play-fill me-1" dmx-hide="sc_start.state.executing"></i>Começar diagnóstico
+        </button>
+      </div>
+    </div>
+
+    <div class="app-grid-3">
+      <div class="card app-stat">
+        <span class="app-stat-icon"><i class="bi bi-cpu"></i></span>
+        <div><p class="app-stat-value">Ponteiros</p><p class="app-stat-label">Endereços, desreferência, aritmética</p></div>
+      </div>
+      <div class="card app-stat">
+        <span class="app-stat-icon is-warning"><i class="bi bi-memory"></i></span>
+        <div><p class="app-stat-value">Memória</p><p class="app-stat-label">Stack x heap, malloc/free, vazamentos</p></div>
+      </div>
+      <div class="card app-stat">
+        <span class="app-stat-icon is-info"><i class="bi bi-diagram-3"></i></span>
+        <div><p class="app-stat-value">Algoritmos</p><p class="app-stat-label">Laços, strings, busca e ordenação</p></div>
+      </div>
+    </div>
+
+    <div class="app-callout is-accent">
+      <i class="bi bi-lightbulb"></i>
+      <div>Responda sem consultar nada. Se não souber, chute a que parecer mais certa: um erro mostra exatamente o que treinar.</div>
+    </div>
+  </div>
+
+  <!-- ============ 2. Questão ============ -->
+  <div is="dmx-if" id="if_quiz" dmx-bind:condition="etapa.value == 'quiz' &amp;&amp; sc_question.data.query_next[0]" class="d-flex flex-column gap-3">
+    <div class="app-skill">
+      <div class="app-skill-head">
+        <span class="app-skill-name" dmx-text="'Questão ' + (sc_question.data.query_next[0].answered + 1) + ' de ' + sc_question.data.query_next[0].total"></span>
+        <span class="app-pill is-info" dmx-text="sc_question.data.query_next[0].skill_title"></span>
+      </div>
+      <div class="app-track"><div class="app-fill" dmx-style:width="(sc_question.data.query_next[0].answered / sc_question.data.query_next[0].total * 100) + '%'"></div></div>
+    </div>
+
+    <div class="card app-card">
+      <!-- statement pode trazer código: quebras de linha preservadas -->
+      <p class="app-question mb-0" style="white-space: pre-line;" dmx-text="sc_question.data.query_next[0].statement"></p>
+      <div class="app-options">
+        <button class="app-option" type="button" dmx-repeat:rep_options="sc_question.data.query_options" key="id"
+          dmx-class:is-selected="sel.value == id" dmx-on:click="sel.setValue(id)" dmx-bind:disabled="sc_answer.state.executing">
+          <span class="app-option-key" dmx-text="$index == 0 ? 'A' : $index == 1 ? 'B' : $index == 2 ? 'C' : $index == 3 ? 'D' : 'E'"></span>
+          <span dmx-text="text"></span>
+        </button>
+      </div>
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <span class="text-body-secondary">Você não vai ver se acertou agora, só no final.</span>
+        <button class="btn btn-primary" dmx-on:click="sc_answer.load()" dmx-bind:disabled="!sel.value || sc_answer.state.executing || sc_question.state.executing">
+          <span class="spinner-border spinner-border-sm me-2" dmx-show="sc_answer.state.executing || sc_question.state.executing"></span>Responder<i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 3. Montando a trilha ============ -->
+  <div class="card app-card align-items-center text-center py-5" dmx-show="etapa.value == 'finalizando'">
+    <div class="spinner-border text-primary" role="status"></div>
+    <h2 class="app-section-title">Montando sua trilha…</h2>
+    <p class="app-subtitle mt-0">Calculando seu resultado e preparando a explicação. Leva alguns segundos.</p>
+  </div>
+
+  <!-- ============ 4. Resultado ============ -->
+  <div is="dmx-if" id="if_resultado" dmx-bind:condition="etapa.value == 'fim' &amp;&amp; sc_finish.data.query_scores" class="d-flex flex-column gap-3">
+    <div class="app-page-header">
+      <div>
+        <p class="app-eyebrow">Resultado do diagnóstico</p>
+        <h1 class="app-title">Sua trilha está pronta</h1>
+        <p class="app-subtitle">A ordem começa pela habilidade em que você mais precisa treinar.</p>
+      </div>
+      <a class="btn btn-primary btn-lg" href="/trilha" internal="true"><i class="bi bi-signpost-split me-1"></i>Começar a trilha</a>
+    </div>
+
+    <!-- explanation é objeto: resumo, confusoes[], por_que_comeca_aqui, primeiro_foco, dica (spec §4) -->
+    <div class="app-callout is-accent" dmx-show="sc_finish.data.explanation.resumo">
+      <i class="bi bi-stars"></i>
+      <div>
+        <strong class="d-block mb-1" dmx-text="sc_finish.data.explanation.resumo"></strong>
+        <span dmx-text="sc_finish.data.explanation.por_que_comeca_aqui"></span>
+      </div>
+    </div>
+
+    <div class="card app-card" dmx-show="sc_finish.data.explanation.confusoes.count()">
+      <h2 class="app-section-title">O que seus erros mostram</h2>
+      <div class="d-flex flex-column gap-3">
+        <div class="d-flex gap-3" dmx-repeat:rep_confusoes="sc_finish.data.explanation.confusoes">
+          <span class="app-pill is-danger align-self-start" dmx-text="skill_code == 'ponteiros' ? 'Ponteiros' : skill_code == 'memoria' ? 'Memória' : skill_code == 'algoritmos' ? 'Algoritmos' : skill_code"></span>
+          <div>
+            <p class="app-step-title" dmx-text="confusao"></p>
+            <p class="app-step-meta" dmx-text="explicacao"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-grid-2" dmx-show="sc_finish.data.explanation.primeiro_foco || sc_finish.data.explanation.dica">
+      <div class="app-callout" dmx-show="sc_finish.data.explanation.primeiro_foco">
+        <i class="bi bi-bullseye"></i>
+        <div><strong class="d-block">Primeiro foco</strong><span dmx-text="sc_finish.data.explanation.primeiro_foco"></span></div>
+      </div>
+      <div class="app-callout" dmx-show="sc_finish.data.explanation.dica">
+        <i class="bi bi-lightbulb"></i>
+        <div><strong class="d-block">Dica</strong><span dmx-text="sc_finish.data.explanation.dica"></span></div>
+      </div>
+    </div>
+
+    <div class="app-grid-2">
+      <div class="card app-card">
+        <h2 class="app-section-title">Suas habilidades</h2>
+        <!-- score chega como texto ("0.50"): toNumber() antes de calcular -->
+        <div class="app-skill" dmx-repeat:rep_scores="sc_finish.data.query_scores" key="skill_id">
+          <div class="app-skill-head">
+            <span class="app-skill-name" dmx-text="skill_code == 'ponteiros' ? 'Ponteiros' : skill_code == 'memoria' ? 'Gerenciamento de memória' : skill_code == 'algoritmos' ? 'Algoritmos' : skill_code"></span>
+            <span class="app-skill-score" dmx-text="correct + '/' + answered + ' · ' + (score.toNumber() * 100).formatNumber(0) + '%'"></span>
+          </div>
+          <div class="app-track">
+            <div class="app-fill" dmx-class:is-danger="score.toNumber() &lt; 0.5" dmx-class:is-warning="score.toNumber() &gt;= 0.5 &amp;&amp; score.toNumber() &lt; 1" dmx-style:width="(score.toNumber() * 100) + '%'"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card app-card">
+        <div class="app-card-head">
+          <h2 class="app-section-title">Sua trilha</h2>
+          <span class="app-pill is-accent" dmx-text="sc_finish.data.query_plan.count() + ' atividades'"></span>
+        </div>
+        <ol class="app-steps">
+          <li class="app-step" dmx-repeat:rep_plan="sc_finish.data.query_plan" key="position" dmx-class:is-current="$index == 0" dmx-class:is-locked="$index &gt; 0">
+            <span class="app-step-dot" dmx-text="position"></span>
+            <div class="app-step-body">
+              <p class="app-step-title" dmx-text="activity_title"></p>
+              <p class="app-step-meta" dmx-text="(skill_code == 'ponteiros' ? 'Ponteiros' : skill_code == 'memoria' ? 'Memória' : skill_code == 'algoritmos' ? 'Algoritmos' : skill_code) + ' · nível ' + level_n"></p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <div>
+      <button class="btn btn-ghost" dmx-on:click="etapa.setValue('intro');attempt_id.setValue('');sel.setValue('')"><i class="bi bi-arrow-repeat me-1"></i>Refazer diagnóstico</button>
+    </div>
+  </div>
+
+</div>

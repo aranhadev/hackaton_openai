@@ -1,0 +1,204 @@
+<!-- Wappler include head-page="layouts/main" fontawesome_5="cdn" bootstrap5="local" is="dmx-app" id="design" appConnect="local" bootstrap_icons="local" -->
+<meta name="ac:route" content="/design">
+<dmx-value id="page_title" value="Design system"></dmx-value>
+
+<!-- Catálogo vivo do design system (public/css/style.css). Para montar uma página nova:
+     copie o bloco que precisar daqui. Cada seção mostra a classe a usar. -->
+<div class="app-page">
+
+  <div class="app-page-header">
+    <div>
+      <p class="app-eyebrow">Equipe · referência</p>
+      <h1 class="app-title">Design system</h1>
+      <p class="app-subtitle">Mesma identidade do portal Aranha.dev: fundo grafite, acento menta, cards com raio de 10px.</p>
+    </div>
+    <a class="btn btn-outline-primary" href="/" internal="true"><i class="bi bi-arrow-left me-1"></i>Voltar ao início</a>
+  </div>
+
+  <!-- Cores -->
+  <div class="card app-card">
+    <h2 class="app-section-title">Cores <small class="text-body-secondary fw-normal">— tokens <code>--app-*</code></small></h2>
+    <div class="app-grid-4">
+      <div class="app-swatch"><span style="background:var(--app-bg)"></span><code>--app-bg</code>#212529</div>
+      <div class="app-swatch"><span style="background:var(--app-surface)"></span><code>--app-surface</code>#2b3035</div>
+      <div class="app-swatch"><span style="background:var(--app-surface-3)"></span><code>--app-surface-3</code>#343a40</div>
+      <div class="app-swatch"><span style="background:var(--app-accent)"></span><code>--app-accent</code>#0dfaba</div>
+      <div class="app-swatch"><span style="background:var(--app-info)"></span><code>--app-info</code>#6ea8fe</div>
+      <div class="app-swatch"><span style="background:var(--app-warning)"></span><code>--app-warning</code>#ffc107</div>
+      <div class="app-swatch"><span style="background:var(--app-danger)"></span><code>--app-danger</code>#ea868f</div>
+      <div class="app-swatch"><span style="background:var(--app-success)"></span><code>--app-success</code>#75b798</div>
+    </div>
+  </div>
+
+  <!-- Tipografia -->
+  <div class="card app-card">
+    <h2 class="app-section-title">Tipografia</h2>
+    <div>
+      <p class="app-eyebrow">.app-eyebrow</p>
+      <h3 class="app-title">.app-title — Título da página</h3>
+      <p class="app-subtitle">.app-subtitle — texto de apoio em cinza.</p>
+    </div>
+    <p class="mb-0">Texto corrido em 14px, com <code>código inline</code> e <a href="#">link</a>.</p>
+  </div>
+
+  <!-- Botões e pills -->
+  <div class="app-grid-2">
+    <div class="card app-card">
+      <h2 class="app-section-title">Botões</h2>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-primary">Primário</button>
+        <button class="btn btn-outline-primary">Contorno</button>
+        <button class="btn btn-ghost">Ghost</button>
+        <button class="btn btn-primary btn-sm">Pequeno</button>
+        <button class="btn btn-primary btn-lg"><i class="bi bi-play-fill me-1"></i>Grande</button>
+      </div>
+    </div>
+    <div class="card app-card">
+      <h2 class="app-section-title">Pills de status <small class="text-body-secondary fw-normal">.app-pill</small></h2>
+      <div class="d-flex flex-wrap gap-2">
+        <span class="app-pill is-accent"><i class="bi bi-check2"></i>Concluída</span>
+        <span class="app-pill is-info">Em andamento</span>
+        <span class="app-pill is-warning">Revisar</span>
+        <span class="app-pill is-danger">Atenção</span>
+        <span class="app-pill"><i class="bi bi-lock"></i>Bloqueada</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="app-hero">
+    <p class="app-eyebrow">.app-hero</p>
+    <h3 class="app-title">Descubra seu nível em C</h3>
+    <p class="app-subtitle">12 questões sobre ponteiros, algoritmos e memória. Leva uns 10 minutos.</p>
+    <div class="app-hero-actions">
+      <button class="btn btn-primary btn-lg"><i class="bi bi-play-fill me-1"></i>Começar diagnóstico</button>
+      <button class="btn btn-ghost btn-lg">Como funciona</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div>
+    <h2 class="app-section-title mb-3">Stats <small class="text-body-secondary fw-normal">.app-grid-3 + .card.app-stat</small></h2>
+    <div class="app-grid-3">
+      <div class="card app-stat">
+        <span class="app-stat-icon"><i class="bi bi-check2-circle"></i></span>
+        <div><p class="app-stat-value">8 <small>/ 20</small></p><p class="app-stat-label">Atividades concluídas</p></div>
+      </div>
+      <div class="card app-stat">
+        <span class="app-stat-icon is-info"><i class="bi bi-fire"></i></span>
+        <div><p class="app-stat-value">5 <small>dias</small></p><p class="app-stat-label">Sequência de estudo</p></div>
+      </div>
+      <div class="card app-stat">
+        <span class="app-stat-icon is-warning"><i class="bi bi-bullseye"></i></span>
+        <div><p class="app-stat-value">Memória</p><p class="app-stat-label">Foco desta semana</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Habilidades + trilha -->
+  <div class="app-grid-2">
+    <div class="card app-card">
+      <div class="app-card-head">
+        <h2 class="app-section-title">Habilidades <small class="text-body-secondary fw-normal">.app-skill</small></h2>
+        <span class="app-pill is-accent">Último diagnóstico</span>
+      </div>
+      <!-- Com dados: dmx-repeat na lista e dmx-style:width="(score*100)+'%'" no .app-fill -->
+      <div class="app-skill">
+        <div class="app-skill-head"><span class="app-skill-name">Ponteiros</span><span class="app-skill-score">40%</span></div>
+        <div class="app-track"><div class="app-fill is-danger" style="width:40%"></div></div>
+      </div>
+      <div class="app-skill">
+        <div class="app-skill-head"><span class="app-skill-name">Algoritmos</span><span class="app-skill-score">85%</span></div>
+        <div class="app-track"><div class="app-fill" style="width:85%"></div></div>
+      </div>
+      <div class="app-skill">
+        <div class="app-skill-head"><span class="app-skill-name">Gerenciamento de memória</span><span class="app-skill-score">60%</span></div>
+        <div class="app-track"><div class="app-fill is-warning" style="width:60%"></div></div>
+      </div>
+    </div>
+
+    <div class="card app-card">
+      <h2 class="app-section-title">Trilha <small class="text-body-secondary fw-normal">.app-steps — is-done / is-current / is-locked</small></h2>
+      <ol class="app-steps">
+        <li class="app-step is-done">
+          <span class="app-step-dot"><i class="bi bi-check-lg"></i></span>
+          <div class="app-step-body"><p class="app-step-title">Endereços e o operador &amp;</p><p class="app-step-meta">Quiz · concluída</p></div>
+        </li>
+        <li class="app-step is-current">
+          <span class="app-step-dot">2</span>
+          <div class="app-step-body">
+            <p class="app-step-title">Aritmética de ponteiros</p>
+            <p class="app-step-meta">Exercício · 15 min</p>
+            <button class="btn btn-primary btn-sm mt-2">Continuar</button>
+          </div>
+        </li>
+        <li class="app-step is-locked">
+          <span class="app-step-dot">3</span>
+          <div class="app-step-body"><p class="app-step-title">Ponteiro para ponteiro</p><p class="app-step-meta">Exercício</p></div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Questão -->
+  <div class="card app-card">
+    <div class="app-card-head">
+      <span class="app-pill is-info">Ponteiros · questão 3 de 12</span>
+      <span class="text-body-secondary">.app-question + .app-options</span>
+    </div>
+    <p class="app-question mb-0">O que este trecho imprime?</p>
+    <pre class="app-code"><span class="t">int</span> a[] = {<span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>};
+<span class="t">int</span> *p = a;
+p++;
+printf(<span class="s">"%d\n"</span>, *p); <span class="c">// ?</span></pre>
+    <div class="app-options">
+      <button class="app-option" type="button"><span class="app-option-key">A</span>10</button>
+      <button class="app-option is-selected" type="button"><span class="app-option-key">B</span>20</button>
+      <button class="app-option" type="button"><span class="app-option-key">C</span>O endereço de a[1]</button>
+      <button class="app-option" type="button"><span class="app-option-key">D</span>Comportamento indefinido</button>
+    </div>
+    <p class="text-body-secondary mb-0">Depois de responder: <code>.is-correct</code> na certa e <code>.is-wrong</code> na marcada errada.</p>
+  </div>
+
+  <!-- Callouts e vazio -->
+  <div class="app-grid-2">
+    <div class="d-flex flex-column gap-3">
+      <div class="app-callout"><i class="bi bi-info-circle"></i><div><strong>.app-callout</strong> — explicação da resposta ou dica.</div></div>
+      <div class="app-callout is-accent"><i class="bi bi-lightbulb"></i><div><strong>.is-accent</strong> — <code>p++</code> avança um <code>int</code> inteiro, não 1 byte.</div></div>
+    </div>
+    <div class="app-empty">
+      <i class="bi bi-signpost-split"></i>
+      <strong class="d-block text-light mb-1">Nenhuma trilha ainda</strong>
+      Faça o diagnóstico para montar sua trilha. <span class="d-block mt-1"><code>.app-empty</code></span>
+    </div>
+  </div>
+
+  <!-- Formulário e tabela -->
+  <div class="app-grid-2">
+    <div class="card app-card">
+      <h2 class="app-section-title">Formulário</h2>
+      <div>
+        <label class="form-label" for="ds_login">Login da 42</label>
+        <input class="form-control" id="ds_login" placeholder="ex.: jsilva">
+      </div>
+      <div>
+        <label class="form-label" for="ds_skill">Habilidade</label>
+        <select class="form-select" id="ds_skill"><option>Ponteiros</option><option>Algoritmos</option><option>Memória</option></select>
+      </div>
+      <button class="btn btn-primary align-self-start">Salvar</button>
+    </div>
+    <div class="card app-card">
+      <h2 class="app-section-title">Tabela</h2>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>Tentativa</th><th>Data</th><th class="text-end">Score</th></tr></thead>
+          <tbody>
+            <tr><td>#2</td><td>23 out</td><td class="text-end"><span class="app-pill is-accent">72%</span></td></tr>
+            <tr><td>#1</td><td>20 out</td><td class="text-end"><span class="app-pill is-warning">48%</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>

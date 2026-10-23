@@ -1,0 +1,1226 @@
+{
+  "direct": true,
+  "type": "postgres",
+  "connection": {
+    "host": "127.0.0.1",
+    "port": 9906,
+    "user": "db_user",
+    "password": "CHANGE_ME_DB_PASSWORD",
+    "database": "hacktonopenaitrilha4"
+  },
+  "schema": {
+    "schemas": [
+      "public"
+    ],
+    "tables": {
+      "learning_path": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "title": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "internal_data": {
+            "db": {
+              "type": "jsonb",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "skill_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "skill",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "RESTRICT"
+            }
+          },
+          "description": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "refs": {
+          "user_path": "learning_path_id"
+        },
+        "sub": {
+          "learning_path_step": "learning_path_id"
+        }
+      },
+      "user": {
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "name": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "hash": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "internal_data": {
+            "db": {
+              "type": "jsonb",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "username": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": true,
+              "nullable": true
+            }
+          }
+        },
+        "db": {
+          "schema": "public"
+        },
+        "sub": {
+          "user_path": "user_id"
+        },
+        "refs": {
+          "diagnostic_answer": "user_id",
+          "activity_progress": "user_id",
+          "diagnostic_attempt": "user_id"
+        }
+      },
+      "user_path": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "user_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "user",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "learning_path_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "learning_path",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "RESTRICT"
+            }
+          },
+          "attempt_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "diagnostic_attempt",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "SET NULL"
+            }
+          },
+          "reason": {
+            "db": {
+              "type": "jsonb",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "is_active": {
+            "db": {
+              "type": "boolean",
+              "default": "true",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "parent": "user",
+        "sub": {
+          "user_path_step": "user_path_id"
+        }
+      },
+      "diagnostic_answer": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "attempt_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "diagnostic_attempt",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "user_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "user",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "question_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "question",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "RESTRICT"
+            }
+          },
+          "option_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "question_option",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "SET NULL"
+            }
+          },
+          "is_correct": {
+            "db": {
+              "type": "boolean",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        }
+      },
+      "activity_progress": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "user_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "user",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "activity_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "activity",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "status": {
+            "db": {
+              "type": "string",
+              "default": "pending",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "attempts": {
+            "db": {
+              "type": "integer",
+              "default": 0,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "completed_at": {
+            "db": {
+              "type": "timestamp",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "source": {
+            "db": {
+              "type": "string",
+              "default": "web",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "parent": "activity"
+      },
+      "user_path_step": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "user_path_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "user_path",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "activity_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "activity",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "RESTRICT"
+            }
+          },
+          "skill_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "skill",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "RESTRICT"
+            }
+          },
+          "position": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "reason": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "parent": "user_path"
+      },
+      "learning_level": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "title": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "level_n": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "internal_data": {
+            "db": {
+              "type": "jsonb",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "refs": {
+          "activity": "main_learn_level"
+        }
+      },
+      "skill": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "code": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "title": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "description": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "sort_order": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "refs": {
+          "learning_path": "skill_id",
+          "user_path_step": "skill_id",
+          "activity": "skill_id",
+          "question": "skill_id"
+        }
+      },
+      "question_option": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "question_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "question",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "text": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "is_correct": {
+            "db": {
+              "type": "boolean",
+              "default": "false",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "position": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "refs": {
+          "diagnostic_answer": "option_id"
+        },
+        "parent": "question"
+      },
+      "activity": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "title": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "internal_data": {
+            "db": {
+              "type": "jsonb",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "main_learn_level": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "learning_level",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "SET NULL"
+            }
+          },
+          "skill_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "skill",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "RESTRICT"
+            }
+          },
+          "level_n": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "kind": {
+            "db": {
+              "type": "string",
+              "default": "quiz",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "content": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "explanation": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "examshell_id": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "sub": {
+          "activity_progress": "activity_id"
+        },
+        "refs": {
+          "user_path_step": "activity_id",
+          "learning_path_step": "activity_id"
+        }
+      },
+      "question": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "skill_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "skill",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "RESTRICT"
+            }
+          },
+          "kind": {
+            "db": {
+              "type": "string",
+              "default": "diagnostic",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "difficulty": {
+            "db": {
+              "type": "integer",
+              "default": 1,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "statement": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "explanation": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "source_ref": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "internal_data": {
+            "db": {
+              "type": "jsonb",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "refs": {
+          "diagnostic_answer": "question_id"
+        },
+        "sub": {
+          "question_option": "question_id"
+        }
+      },
+      "learning_path_step": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "learning_path_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "learning_path",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "activity_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "activity",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "RESTRICT"
+            }
+          },
+          "position": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "parent": "learning_path"
+      },
+      "diagnostic_attempt": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "id": {
+            "db": {
+              "type": "increments",
+              "default": "",
+              "primary": true,
+              "unique": true,
+              "nullable": false
+            }
+          },
+          "creation_dt": {
+            "db": {
+              "type": "timestamp",
+              "default": "knex.fn.now()",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "user_id": {
+            "db": {
+              "type": "reference",
+              "primary": false,
+              "unique": false,
+              "nullable": true,
+              "references": "id",
+              "inTable": "user",
+              "referenceType": "integer",
+              "onUpdate": "CASCADE",
+              "onDelete": "CASCADE"
+            }
+          },
+          "status": {
+            "db": {
+              "type": "string",
+              "default": "in_progress",
+              "maxLength": 255,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          },
+          "finished_at": {
+            "db": {
+              "type": "timestamp",
+              "useTz": true,
+              "primary": false,
+              "unique": false,
+              "nullable": true
+            }
+          }
+        },
+        "refs": {
+          "user_path": "attempt_id",
+          "diagnostic_answer": "attempt_id"
+        }
+      }
+    },
+    "views": {
+      "attempt_skill_score": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "attempt_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "user_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "finished_at": {
+            "db": {
+              "type": "timestamp",
+              "useTz": true,
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "skill_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "skill_code": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "answered": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "correct": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "score": {
+            "db": {
+              "type": "decimal",
+              "primary": false,
+              "nullable": true
+            }
+          }
+        }
+      },
+      "user_skill_score": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "user_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "attempt_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "skill_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "skill_code": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "answered": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "correct": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "score": {
+            "db": {
+              "type": "decimal",
+              "primary": false,
+              "nullable": true
+            }
+          }
+        }
+      },
+      "attempt_path_plan": {
+        "db": {
+          "schema": "public"
+        },
+        "columns": {
+          "attempt_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "user_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "position": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "activity_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "activity_title": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "level_n": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "skill_id": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "skill_code": {
+            "db": {
+              "type": "string",
+              "maxLength": 255,
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "skill_rank": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "score": {
+            "db": {
+              "type": "decimal",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "start_level": {
+            "db": {
+              "type": "integer",
+              "primary": false,
+              "nullable": true
+            }
+          },
+          "reason": {
+            "db": {
+              "type": "text",
+              "primary": false,
+              "nullable": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

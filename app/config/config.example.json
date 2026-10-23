@@ -1,0 +1,10 @@
+{
+  "debug": false,
+  "secret": "TROQUE_POR_UM_SEGREDO_ALEATORIO",
+  "env": {
+    "OPENAI_MODEL": "gpt-4.1-mini",
+    "OPENAI_API_KEY": "SUA_CHAVE_OPENAI",
+    "DEMO_RESET_ENABLED": "false",
+    "DEMO_RESET_TOKEN": ""
+  }
+}

@@ -1,0 +1,104 @@
+<!-- Wappler include head-page="layouts/main" fontawesome_5="cdn" bootstrap5="local" is="dmx-app" id="progresso" appConnect="local" bootstrap_icons="local" components="{dmxFormatter:{}}" -->
+<meta name="ac:route" content="/progresso">
+<dmx-value id="page_title" value="Progresso"></dmx-value>
+
+<!-- Só leitura. progress/report: path {total, done, failed, percent, finished, started_at, reason} + skills[]
+     (404 sem trilha ativa). path/current: só para saber o passo atual (next). Contrato: docs/contrato-trilha.md -->
+<dmx-serverconnect id="sc_report" url="/api/progress/report"
+  dmx-on:unauthorized="precisa_login.setValue(true)"></dmx-serverconnect>
+<dmx-serverconnect id="sc_path" url="/api/path/current"></dmx-serverconnect>
+<dmx-value id="precisa_login" dmx-bind:value="false"></dmx-value>
+
+<div class="app-page">
+
+  <!-- Sem login -->
+  <div class="app-empty" dmx-show="precisa_login.value">
+    <i class="bi bi-person-lock"></i>
+    <strong class="d-block text-light mb-1">Entre para ver seu progresso</strong>
+    O login fica na página da trilha.
+    <div class="mt-3"><a class="btn btn-primary" href="/trilha" internal="true">Entrar</a></div>
+  </div>
+
+  <!-- Carregando -->
+  <div class="card app-card align-items-center py-5" dmx-show="sc_report.state.executing &amp;&amp; !sc_report.data.path">
+    <div class="spinner-border text-primary" role="status"></div>
+  </div>
+
+  <!-- Sem trilha ativa (404) -->
+  <div class="app-empty" dmx-show="sc_report.status == 404">
+    <i class="bi bi-graph-up-arrow"></i>
+    <strong class="d-block text-light mb-1">Ainda não há progresso para mostrar</strong>
+    Faça o diagnóstico para montar sua trilha.
+    <div class="mt-3"><a class="btn btn-primary" href="/diagnostico" internal="true"><i class="bi bi-play-fill me-1"></i>Fazer diagnóstico</a></div>
+  </div>
+
+  <div is="dmx-if" id="if_progresso" dmx-bind:condition="sc_report.data.path.total &gt; 0" class="d-flex flex-column gap-3">
+
+    <div class="app-page-header">
+      <div>
+        <p class="app-eyebrow">Sua trilha</p>
+        <h1 class="app-title">Progresso</h1>
+        <p class="app-subtitle" dmx-text="'Trilha montada em ' + sc_report.data.path.started_at.formatDate('dd/MM/yyyy') + ' a partir do seu diagnóstico'"></p>
+      </div>
+      <a class="btn btn-primary" href="/trilha" internal="true" dmx-hide="sc_report.data.path.finished"><i class="bi bi-play-fill me-1"></i>Continuar trilha</a>
+      <a class="btn btn-ghost" href="/diagnostico" internal="true" dmx-show="sc_report.data.path.finished"><i class="bi bi-arrow-repeat me-1"></i>Refazer diagnóstico</a>
+    </div>
+
+    <div class="app-grid-3">
+      <div class="card app-stat">
+        <span class="app-stat-icon"><i class="bi bi-check2-circle"></i></span>
+        <div>
+          <p class="app-stat-value"><span dmx-text="sc_report.data.path.done"></span> <small dmx-text="'/ ' + sc_report.data.path.total"></small></p>
+          <p class="app-stat-label" dmx-text="sc_report.data.path.percent + '% das atividades concluídas'"></p>
+        </div>
+      </div>
+      <div class="card app-stat">
+        <span class="app-stat-icon is-info"><i class="bi bi-geo-alt"></i></span>
+        <div class="min-w-0">
+          <p class="app-stat-value fs-6" dmx-text="sc_report.data.path.finished ? 'Trilha concluída' : (sc_path.data.next.title || '—')"></p>
+          <p class="app-stat-label" dmx-text="sc_report.data.path.finished ? 'Todos os passos feitos' : 'Passo atual · ' + sc_path.data.next.position + ' de ' + sc_report.data.path.total"></p>
+        </div>
+      </div>
+      <div class="card app-stat">
+        <span class="app-stat-icon" dmx-class:is-danger="sc_report.data.path.failed &gt; 0" dmx-class:is-warning="sc_report.data.path.failed == 0"><i class="bi bi-arrow-counterclockwise"></i></span>
+        <div>
+          <p class="app-stat-value" dmx-text="sc_report.data.path.failed"></p>
+          <p class="app-stat-label">Atividades para tentar de novo</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-skill">
+      <div class="app-skill-head">
+        <span class="app-skill-name">Trilha completa</span>
+        <span class="app-skill-score" dmx-text="sc_report.data.path.percent + '%'"></span>
+      </div>
+      <div class="app-track"><div class="app-fill" dmx-style:width="sc_report.data.path.percent + '%'"></div></div>
+    </div>
+
+    <div class="app-callout is-accent" dmx-show="sc_report.data.path.reason.ai_explanation.resumo">
+      <i class="bi bi-stars"></i>
+      <div>
+        <strong class="d-block mb-1" dmx-text="sc_report.data.path.reason.ai_explanation.resumo"></strong>
+        <span dmx-text="sc_report.data.path.reason.ai_explanation.dica"></span>
+      </div>
+    </div>
+
+    <div class="card app-card">
+      <h2 class="app-section-title">Por habilidade</h2>
+      <div class="app-skill" dmx-repeat:rep_skills="sc_report.data.skills" key="skill_id">
+        <div class="app-skill-head">
+          <span class="app-skill-name">
+            <span dmx-text="skill_title"></span>
+            <span class="app-pill is-danger ms-2" dmx-show="failed &gt; 0" dmx-text="failed + ' para refazer'"></span>
+          </span>
+          <span class="app-skill-score" dmx-text="done + '/' + total + ' · ' + percent + '%'"></span>
+        </div>
+        <div class="app-track"><div class="app-fill" dmx-class:is-warning="percent &lt; 100 &amp;&amp; percent &gt; 0" dmx-style:width="percent + '%'"></div></div>
+        <p class="app-step-meta mb-0" dmx-text="level_reached ? 'Nível alcançado: ' + level_reached : 'Ainda não começou'"></p>
+      </div>
+    </div>
+
+  </div>
+
+</div>

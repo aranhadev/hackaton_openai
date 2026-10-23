@@ -1,0 +1,257 @@
+[
+  {
+    "name": "",
+    "module": "auth",
+    "action": "restrict",
+    "options": {
+      "provider": "security_db"
+    }
+  },
+  {
+    "name": "query_user",
+    "module": "dbconnector",
+    "action": "single",
+    "options": {
+      "connection": "db",
+      "sql": {
+        "type": "SELECT",
+        "columns": [
+          {
+            "table": "user",
+            "column": "id"
+          },
+          {
+            "table": "user",
+            "column": "name"
+          },
+          {
+            "table": "user",
+            "column": "internal_data"
+          }
+        ],
+        "params": [
+          {
+            "operator": "equal",
+            "type": "expression",
+            "name": ":P1",
+            "value": "{{security_db.identity}}",
+            "test": ""
+          }
+        ],
+        "table": {
+          "name": "user"
+        },
+        "primary": "id",
+        "joins": [],
+        "wheres": {
+          "condition": "AND",
+          "rules": [
+            {
+              "id": "user.id",
+              "field": "user.id",
+              "type": "double",
+              "operator": "equal",
+              "value": "{{security_db.identity}}",
+              "data": {
+                "table": "user",
+                "column": "id",
+                "type": "number",
+                "columnObj": {
+                  "type": "increments",
+                  "default": "",
+                  "primary": true,
+                  "unique": true,
+                  "nullable": false,
+                  "name": "id"
+                }
+              },
+              "operation": "="
+            }
+          ],
+          "conditional": null,
+          "valid": true
+        },
+        "query": "select \"id\", \"name\", \"internal_data\" from \"user\" where \"user\".\"id\" = ?"
+      }
+    },
+    "output": false,
+    "meta": [
+      {
+        "type": "number",
+        "name": "id"
+      },
+      {
+        "type": "text",
+        "name": "name"
+      },
+      {
+        "type": "object",
+        "name": "internal_data"
+      }
+    ],
+    "outputType": "object"
+  },
+  {
+    "name": "",
+    "module": "core",
+    "action": "condition",
+    "options": {
+      "if": "{{!query_user.id}}",
+      "then": {
+        "steps": {
+          "name": "",
+          "module": "core",
+          "action": "response",
+          "options": {
+            "status": 404,
+            "data": "Student not found!"
+          },
+          "output": true
+        }
+      }
+    },
+    "outputType": "boolean"
+  },
+  {
+    "name": "close_open",
+    "module": "dbupdater",
+    "action": "update",
+    "options": {
+      "connection": "db",
+      "sql": {
+        "type": "update",
+        "values": [
+          {
+            "table": "diagnostic_attempt",
+            "column": "status",
+            "type": "text",
+            "value": "abandoned"
+          }
+        ],
+        "table": "diagnostic_attempt",
+        "wheres": {
+          "condition": "AND",
+          "rules": [
+            {
+              "id": "user_id",
+              "field": "user_id",
+              "type": "double",
+              "operator": "equal",
+              "value": "{{security_db.identity}}",
+              "data": {
+                "column": "user_id"
+              },
+              "operation": "="
+            },
+            {
+              "id": "status",
+              "field": "status",
+              "type": "string",
+              "operator": "equal",
+              "value": "in_progress",
+              "data": {
+                "column": "status"
+              },
+              "operation": "="
+            }
+          ],
+          "conditional": null,
+          "valid": true
+        },
+        "returning": "id",
+        "query": "update \"diagnostic_attempt\" set \"status\" = ? where \"user_id\" = ? and \"status\" = ?",
+        "params": [
+          {
+            "operator": "equal",
+            "type": "expression",
+            "name": ":P1",
+            "value": "{{security_db.identity}}",
+            "test": ""
+          }
+        ]
+      }
+    },
+    "meta": [
+      {
+        "name": "affected",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "name": "insert_attempt",
+    "module": "dbupdater",
+    "action": "insert",
+    "options": {
+      "connection": "db",
+      "sql": {
+        "type": "insert",
+        "values": [
+          {
+            "table": "diagnostic_attempt",
+            "column": "user_id",
+            "type": "number",
+            "value": "{{security_db.identity}}"
+          },
+          {
+            "table": "diagnostic_attempt",
+            "column": "status",
+            "type": "text",
+            "value": "in_progress"
+          }
+        ],
+        "table": "diagnostic_attempt",
+        "returning": "id",
+        "query": "insert into \"diagnostic_attempt\" (\"status\", \"user_id\") values (?, ?)",
+        "params": [
+          {
+            "name": ":P1",
+            "type": "expression",
+            "value": "{{security_db.identity}}",
+            "test": ""
+          }
+        ]
+      }
+    },
+    "meta": [
+      {
+        "name": "identity",
+        "type": "text"
+      },
+      {
+        "name": "affected",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "name": "query_total",
+    "module": "dbupdater",
+    "action": "custom",
+    "options": {
+      "connection": "db",
+      "sql": {
+        "query": "select count(*)::int as total from question where kind = 'diagnostic'",
+        "params": []
+      }
+    },
+    "output": true,
+    "meta": [
+      {
+        "name": "total",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "name": "attempt_id",
+    "module": "core",
+    "action": "setvalue",
+    "options": {
+      "value": "{{insert_attempt.identity}}"
+    },
+    "meta": [],
+    "outputType": "number",
+    "output": true
+  }
+]

@@ -1,0 +1,68 @@
+{
+  "meta": {
+    "$_POST": [
+      {
+        "type": "text",
+        "name": "token"
+      }
+    ]
+  },
+  "exec": {
+    "steps": [
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{$_ENV.DEMO_RESET_ENABLED != 'true' || !$_ENV.DEMO_RESET_TOKEN || $_POST.token != $_ENV.DEMO_RESET_TOKEN}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 403,
+                  "data": {
+                    "error": "Reset da demo desabilitado ou token inválido (DEMO_RESET_ENABLED=true e token = DEMO_RESET_TOKEN)"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "reset",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "with demo_user as (\n  select id from \"user\" where username in ('ana', 'bruno')\n),\ndel_path as (\n  delete from user_path where user_id in (select id from demo_user) returning id\n),\ndel_attempt as (\n  delete from diagnostic_attempt where user_id in (select id from demo_user) returning id\n),\ndel_progress as (\n  delete from activity_progress where user_id in (select id from demo_user) returning id\n)\nselect (select count(*) from del_attempt)::int as attempts,\n       (select count(*) from del_path)::int as paths,\n       (select count(*) from del_progress)::int as progress",
+            "params": []
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "attempts",
+            "type": "number"
+          },
+          {
+            "name": "paths",
+            "type": "number"
+          },
+          {
+            "name": "progress",
+            "type": "number"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      }
+    ]
+  }
+}

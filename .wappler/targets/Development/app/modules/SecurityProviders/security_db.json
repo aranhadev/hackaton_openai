@@ -1,0 +1,24 @@
+{
+  "name": "security_db",
+  "module": "auth",
+  "action": "provider",
+  "options": {
+    "secret": "CHANGE_ME_SECRET",
+    "provider": "Database",
+    "connection": "db",
+    "passwordVerify": true,
+    "users": {
+      "table": "user",
+      "identity": "id",
+      "username": "username",
+      "password": "hash"
+    },
+    "permissions": {}
+  },
+  "meta": [
+    {
+      "name": "identity",
+      "type": "text"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+<!-- Wappler include head-page="layouts/main" fontawesome_5="cdn" bootstrap5="local" is="dmx-app" id="index" appConnect="local" bootstrap_icons="local" -->
+<meta name="ac:route" content="/">
+<dmx-value id="page_title" value="Início"></dmx-value>
+
+<!-- Home de exemplo com dados fixos: troque pelos Server Connects quando as APIs existirem -->
+<div class="app-page">
+
+  <div class="app-hero">
+    <p class="app-eyebrow">Bem-vindo à Trilha C</p>
+    <h1 class="app-title">Sua trilha de C, do seu jeito</h1>
+    <p class="app-subtitle">Um diagnóstico rápido mostra onde você está em ponteiros, algoritmos e memória. A trilha se monta a partir disso.</p>
+    <div class="app-hero-actions">
+      <a class="btn btn-primary btn-lg" href="/diagnostico" internal="true"><i class="bi bi-play-fill me-1"></i>Começar diagnóstico</a>
+      <a class="btn btn-ghost btn-lg" href="/design" internal="true">Ver design system</a>
+    </div>
+  </div>
+
+  <div class="app-grid-3">
+    <div class="card app-stat transition-hover">
+      <span class="app-stat-icon"><i class="bi bi-cpu"></i></span>
+      <div><p class="app-stat-value">Ponteiros</p><p class="app-stat-label">Endereços, desreferência, aritmética</p></div>
+    </div>
+    <div class="card app-stat transition-hover">
+      <span class="app-stat-icon is-info"><i class="bi bi-diagram-3"></i></span>
+      <div><p class="app-stat-value">Algoritmos</p><p class="app-stat-label">Laços, strings, busca e ordenação</p></div>
+    </div>
+    <div class="card app-stat transition-hover">
+      <span class="app-stat-icon is-warning"><i class="bi bi-memory"></i></span>
+      <div><p class="app-stat-value">Memória</p><p class="app-stat-label">Stack x heap, malloc/free, vazamentos</p></div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,464 @@
+{
+  "meta": {
+    "$_POST": [
+      {
+        "type": "number",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "attempt_id"
+      },
+      {
+        "type": "number",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "question_id"
+      },
+      {
+        "type": "number",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "option_id"
+      }
+    ]
+  },
+  "exec": {
+    "steps": [
+      {
+        "name": "",
+        "module": "auth",
+        "action": "restrict",
+        "options": {
+          "provider": "security_db"
+        }
+      },
+      {
+        "name": "query_attempt",
+        "module": "dbconnector",
+        "action": "single",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "SELECT",
+            "columns": [
+              {
+                "table": "diagnostic_attempt",
+                "column": "id"
+              },
+              {
+                "table": "diagnostic_attempt",
+                "column": "user_id"
+              },
+              {
+                "table": "diagnostic_attempt",
+                "column": "status"
+              }
+            ],
+            "params": [
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              },
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P2",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              }
+            ],
+            "table": {
+              "name": "diagnostic_attempt"
+            },
+            "primary": "id",
+            "joins": [],
+            "wheres": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "id": "diagnostic_attempt.id",
+                  "field": "diagnostic_attempt.id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{$_POST.attempt_id}}",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                },
+                {
+                  "id": "diagnostic_attempt.user_id",
+                  "field": "diagnostic_attempt.user_id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{security_db.identity}}",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "user_id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                },
+                {
+                  "id": "diagnostic_attempt.status",
+                  "field": "diagnostic_attempt.status",
+                  "type": "string",
+                  "operator": "equal",
+                  "value": "in_progress",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "status",
+                    "type": "text"
+                  },
+                  "operation": "="
+                }
+              ],
+              "conditional": null,
+              "valid": true
+            },
+            "query": "select \"id\", \"user_id\", \"status\" from \"diagnostic_attempt\" where \"diagnostic_attempt\".\"id\" = ? and \"diagnostic_attempt\".\"user_id\" = ? and \"diagnostic_attempt\".\"status\" = ?"
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "type": "number",
+            "name": "id"
+          },
+          {
+            "type": "number",
+            "name": "user_id"
+          },
+          {
+            "type": "text",
+            "name": "status"
+          }
+        ],
+        "outputType": "object"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{!query_attempt}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 409,
+                  "data": {
+                    "error": "Tentativa inexistente ou encerrada"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "query_option",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select o.id, o.is_correct\nfrom question_option o\njoin question q on q.id = o.question_id\nwhere o.id = :P1 and o.question_id = :P2 and q.kind = 'diagnostic'",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{$_POST.option_id}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{$_POST.question_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "name": "id",
+            "type": "number"
+          },
+          {
+            "name": "is_correct",
+            "type": "boolean"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{!query_option[0]}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 400,
+                  "data": {
+                    "error": "Alternativa não pertence à questão"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "query_existing",
+        "module": "dbconnector",
+        "action": "single",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "SELECT",
+            "columns": [
+              {
+                "table": "diagnostic_answer",
+                "column": "id"
+              }
+            ],
+            "params": [
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              },
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P2",
+                "value": "{{$_POST.question_id}}",
+                "test": ""
+              }
+            ],
+            "table": {
+              "name": "diagnostic_answer"
+            },
+            "primary": "id",
+            "joins": [],
+            "wheres": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "id": "diagnostic_answer.attempt_id",
+                  "field": "diagnostic_answer.attempt_id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{$_POST.attempt_id}}",
+                  "data": {
+                    "table": "diagnostic_answer",
+                    "column": "attempt_id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                },
+                {
+                  "id": "diagnostic_answer.question_id",
+                  "field": "diagnostic_answer.question_id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{$_POST.question_id}}",
+                  "data": {
+                    "table": "diagnostic_answer",
+                    "column": "question_id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                }
+              ],
+              "conditional": null,
+              "valid": true
+            },
+            "query": "select \"id\" from \"diagnostic_answer\" where \"diagnostic_answer\".\"attempt_id\" = ? and \"diagnostic_answer\".\"question_id\" = ?"
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "type": "number",
+            "name": "id"
+          }
+        ],
+        "outputType": "object"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{query_existing}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 409,
+                  "data": {
+                    "error": "Questão já respondida"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "insert_answer",
+        "module": "dbupdater",
+        "action": "insert",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "insert",
+            "values": [
+              {
+                "table": "diagnostic_answer",
+                "column": "attempt_id",
+                "type": "number",
+                "value": "{{$_POST.attempt_id}}"
+              },
+              {
+                "table": "diagnostic_answer",
+                "column": "user_id",
+                "type": "number",
+                "value": "{{security_db.identity}}"
+              },
+              {
+                "table": "diagnostic_answer",
+                "column": "question_id",
+                "type": "number",
+                "value": "{{$_POST.question_id}}"
+              },
+              {
+                "table": "diagnostic_answer",
+                "column": "option_id",
+                "type": "number",
+                "value": "{{$_POST.option_id}}"
+              },
+              {
+                "table": "diagnostic_answer",
+                "column": "is_correct",
+                "type": "boolean",
+                "value": "{{query_option[0].is_correct}}"
+              }
+            ],
+            "table": "diagnostic_answer",
+            "returning": "id",
+            "query": "insert into \"diagnostic_answer\" (\"attempt_id\", \"user_id\", \"question_id\", \"option_id\", \"is_correct\") values (?, ?, ?, ?, ?)",
+            "params": [
+              {
+                "name": ":P1",
+                "type": "expression",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "type": "expression",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              },
+              {
+                "name": ":P3",
+                "type": "expression",
+                "value": "{{$_POST.question_id}}",
+                "test": ""
+              },
+              {
+                "name": ":P4",
+                "type": "expression",
+                "value": "{{$_POST.option_id}}",
+                "test": ""
+              },
+              {
+                "name": ":P5",
+                "type": "expression",
+                "value": "{{query_option[0].is_correct}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "meta": [
+          {
+            "name": "identity",
+            "type": "text"
+          },
+          {
+            "name": "affected",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "name": "query_progress",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select (select count(*) from diagnostic_answer where attempt_id = :P1)::int as answered,\n       (select count(*) from question where kind = 'diagnostic')::int as total",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "answered",
+            "type": "number"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      }
+    ]
+  }
+}

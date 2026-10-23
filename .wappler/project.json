@@ -1,0 +1,82 @@
+{
+  "projectName": "HacktonOpenAiTrilha4",
+  "styleFile": "/css/style.css",
+  "assetsFolder": "/assets",
+  "designFramework": "bootstrap5",
+  "frameworks": [
+    {
+      "name": "fontawesome_5",
+      "type": "cdn"
+    },
+    {
+      "name": "bootstrap5",
+      "type": "local"
+    },
+    {
+      "name": "appConnect",
+      "type": "local"
+    }
+  ],
+  "hostingType": "docker",
+  "projectServerModel": "node",
+  "runtime": "capacitor",
+  "projectLinksType": "site",
+  "webRootFolder": "/public",
+  "useRouting": true,
+  "routingHandler": "node",
+  "targets": [
+    {
+      "name": "Development",
+      "remoteURL": "http://localhost:8100",
+      "webServerPort": 8100,
+      "webServerLang": "node",
+      "targetType": "docker",
+      "webServer": "node",
+      "NodeVersion": "lts",
+      "NodeOS": "alpine",
+      "webLoggingMaxFiles": "5",
+      "webLoggingMaxFileSize": "10m",
+      "databaseLoggingMaxFiles": "5",
+      "databaseLoggingMaxFileSize": "10m",
+      "dockerTimezone": "America/Sao_Paulo",
+      "databaseType": "postgres",
+      "postgresVersion": "17.2.x",
+      "databasePort": 9911,
+      "postgres_rootName": "db_user",
+      "postgres_rootPassword": "CHANGE_ME_DB_PASSWORD",
+      "postgres_databaseName": "hacktonopenaitrilha4",
+      "NodeImageType": "slim",
+      "noSampleData": true
+    },
+    {
+      "name": "PordDigitalOcean",
+      "remoteURL": "https://hack_openai.aranha.dev",
+      "webServerLang": "node",
+      "targetType": "docker",
+      "webServer": "node",
+      "NodeVersion": "lts",
+      "NodeOS": "alpine",
+      "webLoggingMaxFiles": "5",
+      "webLoggingMaxFileSize": "10m",
+      "databaseLoggingMaxFiles": "5",
+      "databaseLoggingMaxFileSize": "10m",
+      "dockerTimezone": "America/Sao_Paulo",
+      "databaseType": "postgres",
+      "postgresVersion": "17.2.x",
+      "databasePort": 9911,
+      "postgres_rootName": "db_user",
+      "postgres_rootPassword": "CHANGE_ME_DB_PASSWORD",
+      "postgres_databaseName": "hacktonopenaitrilha4",
+      "noSampleData": true,
+      "usage": "production",
+      "dockerType": "remote",
+      "dockerProtocol": "ssh",
+      "dockerHost": "SEU_IP_DO_SERVIDOR",
+      "dockerServerName": "digitalocean / tester-hackathon",
+      "dockerProjectName": "hacktonopenaitrilha4__porddigitalocean"
+    }
+  ],
+  "activeTarget": "PordDigitalOcean",
+  "projectType": "web",
+  "extensions": []
+}

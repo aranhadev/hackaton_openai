@@ -1,0 +1,861 @@
+{
+  "meta": {
+    "$_POST": [
+      {
+        "type": "number",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "attempt_id"
+      }
+    ]
+  },
+  "exec": {
+    "steps": [
+      {
+        "name": "",
+        "module": "auth",
+        "action": "restrict",
+        "options": {
+          "provider": "security_db"
+        }
+      },
+      {
+        "name": "query_attempt",
+        "module": "dbconnector",
+        "action": "single",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "SELECT",
+            "columns": [
+              {
+                "table": "diagnostic_attempt",
+                "column": "id"
+              },
+              {
+                "table": "diagnostic_attempt",
+                "column": "user_id"
+              },
+              {
+                "table": "diagnostic_attempt",
+                "column": "status"
+              }
+            ],
+            "params": [
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              },
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P2",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              }
+            ],
+            "table": {
+              "name": "diagnostic_attempt"
+            },
+            "primary": "id",
+            "joins": [],
+            "wheres": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "id": "diagnostic_attempt.id",
+                  "field": "diagnostic_attempt.id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{$_POST.attempt_id}}",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                },
+                {
+                  "id": "diagnostic_attempt.user_id",
+                  "field": "diagnostic_attempt.user_id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{security_db.identity}}",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "user_id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                },
+                {
+                  "id": "diagnostic_attempt.status",
+                  "field": "diagnostic_attempt.status",
+                  "type": "string",
+                  "operator": "equal",
+                  "value": "in_progress",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "status",
+                    "type": "text"
+                  },
+                  "operation": "="
+                }
+              ],
+              "conditional": null,
+              "valid": true
+            },
+            "query": "select \"id\", \"user_id\", \"status\" from \"diagnostic_attempt\" where \"diagnostic_attempt\".\"id\" = ? and \"diagnostic_attempt\".\"user_id\" = ? and \"diagnostic_attempt\".\"status\" = ?"
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "type": "number",
+            "name": "id"
+          },
+          {
+            "type": "number",
+            "name": "user_id"
+          },
+          {
+            "type": "text",
+            "name": "status"
+          }
+        ],
+        "outputType": "object"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{!query_attempt}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 409,
+                  "data": {
+                    "error": "Tentativa inexistente ou encerrada"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "query_progress",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select (select count(*) from diagnostic_answer where attempt_id = :P1)::int as answered,\n       (select count(*) from question where kind = 'diagnostic')::int as total",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "name": "answered",
+            "type": "number"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{query_progress[0].answered < query_progress[0].total}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 400,
+                  "data": {
+                    "error": "Diagnóstico incompleto"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "update_attempt",
+        "module": "dbupdater",
+        "action": "update",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "update",
+            "values": [
+              {
+                "table": "diagnostic_attempt",
+                "column": "status",
+                "type": "text",
+                "value": "finished"
+              },
+              {
+                "table": "diagnostic_attempt",
+                "column": "finished_at",
+                "type": "datetime",
+                "value": "{{NOW_UTC}}"
+              }
+            ],
+            "table": "diagnostic_attempt",
+            "wheres": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "id": "id",
+                  "field": "id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{$_POST.attempt_id}}",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                }
+              ],
+              "conditional": null,
+              "valid": true
+            },
+            "returning": "id",
+            "query": "update \"diagnostic_attempt\" set \"status\" = ?, \"finished_at\" = ? where \"diagnostic_attempt\".\"id\" = ?",
+            "params": [
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "meta": [
+          {
+            "name": "affected",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "name": "query_scores",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select ass.skill_id, ass.skill_code, ass.answered, ass.correct, ass.score,\n       round(coalesce(ass.score, 0) * 100)::int as pct\nfrom attempt_skill_score ass\njoin skill s on s.id = ass.skill_id\nwhere ass.attempt_id = :P1\norder by ass.score asc nulls first, s.sort_order asc",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "skill_id",
+            "type": "number"
+          },
+          {
+            "name": "skill_code",
+            "type": "text"
+          },
+          {
+            "name": "answered",
+            "type": "number"
+          },
+          {
+            "name": "correct",
+            "type": "number"
+          },
+          {
+            "name": "score",
+            "type": "text"
+          },
+          {
+            "name": "pct",
+            "type": "number"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "query_plan",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select position, activity_id, activity_title, level_n, skill_code, start_level, reason\nfrom attempt_path_plan\nwhere attempt_id = :P1\norder by position",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "position",
+            "type": "number"
+          },
+          {
+            "name": "activity_id",
+            "type": "number"
+          },
+          {
+            "name": "activity_title",
+            "type": "text"
+          },
+          {
+            "name": "level_n",
+            "type": "number"
+          },
+          {
+            "name": "skill_code",
+            "type": "text"
+          },
+          {
+            "name": "start_level",
+            "type": "number"
+          },
+          {
+            "name": "reason",
+            "type": "text"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{!query_plan[0]}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 500,
+                  "data": {
+                    "error": "Nenhuma atividade cadastrada para montar a trilha"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "deactivate_paths",
+        "module": "dbupdater",
+        "action": "update",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "update",
+            "values": [
+              {
+                "table": "user_path",
+                "column": "is_active",
+                "type": "boolean",
+                "value": "{{false}}"
+              }
+            ],
+            "table": "user_path",
+            "wheres": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "id": "user_id",
+                  "field": "user_id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{query_attempt.user_id}}",
+                  "data": {
+                    "table": "user_path",
+                    "column": "user_id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                }
+              ],
+              "conditional": null,
+              "valid": true
+            },
+            "returning": "id",
+            "query": "update \"user_path\" set \"is_active\" = ? where \"user_path\".\"user_id\" = ?",
+            "params": [
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P1",
+                "value": "{{query_attempt.user_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "meta": [
+          {
+            "name": "affected",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "name": "insert_user_path",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "insert into user_path (user_id, attempt_id, is_active, reason)\nselect :P1::int, :P2::int, true,\n       jsonb_build_object(\n         'rule', 'nivel por score (<0.5:1, <1:2, 1:3); mais fraca primeiro; empate por sort_order',\n         'scores', (\n           select jsonb_agg(jsonb_build_object(\n             'skill', skill_code, 'correct', correct, 'answered', answered, 'score', score\n           ) order by skill_id)\n           from attempt_skill_score where attempt_id = :P2::int\n         )\n       )\nreturning id",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{query_attempt.user_id}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "name": "id",
+            "type": "number"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "insert_steps",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "insert into user_path_step (user_path_id, activity_id, skill_id, position, reason)\nselect :P1::int, activity_id, skill_id, position, reason\nfrom attempt_path_plan\nwhere attempt_id = :P2::int",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{insert_user_path[0].id}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "query_mistakes",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select s.code as skill_code, q.statement, o.text as chosen,\n       (select c.text from question_option c\n        where c.question_id = q.id and c.is_correct limit 1) as correct_answer,\n       o.feedback\nfrom diagnostic_answer da\njoin question q on q.id = da.question_id\njoin skill s on s.id = q.skill_id\njoin question_option o on o.id = da.option_id\nwhere da.attempt_id = :P1 and not da.is_correct\norder by q.id",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "name": "skill_code",
+            "type": "text"
+          },
+          {
+            "name": "statement",
+            "type": "text"
+          },
+          {
+            "name": "chosen",
+            "type": "text"
+          },
+          {
+            "name": "correct_answer",
+            "type": "text"
+          },
+          {
+            "name": "feedback",
+            "type": "text"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "query_first_step",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select a.title, a.content\nfrom attempt_path_plan p\njoin activity a on a.id = p.activity_id\nwhere p.attempt_id = :P1\norder by p.position\nlimit 1",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{$_POST.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "name": "title",
+            "type": "text"
+          },
+          {
+            "name": "content",
+            "type": "text"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "seed_progress",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "insert into activity_progress (user_id, activity_id, status)\nselect :P1::int, activity_id, 'pending'\nfrom user_path_step\nwhere user_path_id = :P2::int\non conflict (user_id, activity_id) do nothing",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{query_attempt.user_id}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{insert_user_path[0].id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "trycatch",
+        "options": {
+          "try": {
+            "steps": [
+              {
+                "name": "api_explain",
+                "module": "api",
+                "action": "send",
+                "options": {
+                  "url": "https://api.openai.com/v1/chat/completions",
+                  "method": "POST",
+                  "dataType": "json",
+                  "throwErrors": true,
+                  "passErrors": false,
+                  "timeout": 20000,
+                  "data": {
+                    "model": "{{$_ENV.OPENAI_MODEL}}",
+                    "temperature": 0.3,
+                    "messages": [
+                      {
+                        "role": "system",
+                        "content": "Você é tutor de linguagem C e fala com o estudante em português, na segunda pessoa (\"você\"), em tom encorajador. Use só os dados enviados; não invente notas, questões nem atividades. A trilha já foi montada pelo sistema: explique, não altere.\nRegras:\n- Cada campo de texto tem no máximo 25 palavras.\n- Não use \"zero\", \"ruim\", \"fraco\" nem números decimais; fale em porcentagem ou em \"x de y\" quando precisar citar resultado.\n- Em cada confusão, explique só o erro da alternativa que o estudante escolheu, comparando com a resposta correta. Não cite outros erros possíveis da mesma questão.\nCampos:\n- resumo: 1 frase sobre o resultado geral, começando pelo que ele já domina.\n- confusoes: uma entrada por erro (lista vazia se não errou nada); confusao = a ideia errada, em linguagem simples; explicacao = por que a resposta correta é a correta.\n- por_que_comeca_aqui: 1 frase ligando o menor resultado à primeira atividade.\n- primeiro_foco: o que ele vai praticar na primeira atividade, com base no enunciado dela.\n- dica: 1 ação prática para estudar."
+                      },
+                      {
+                        "role": "user",
+                        "content": "Resultado por habilidade: {{query_scores.toJSON()}}. Erros (alternativa escolhida, resposta correta e a confusão que revela): {{query_mistakes.toJSON()}}. Trilha montada: {{query_plan.toJSON()}}. Primeira atividade: {{query_first_step[0].toJSON()}}."
+                      }
+                    ],
+                    "response_format": {
+                      "type": "json_schema",
+                      "json_schema": {
+                        "name": "diagnostic_feedback",
+                        "strict": true,
+                        "schema": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "resumo",
+                            "confusoes",
+                            "por_que_comeca_aqui",
+                            "primeiro_foco",
+                            "dica"
+                          ],
+                          "properties": {
+                            "resumo": {
+                              "type": "string"
+                            },
+                            "confusoes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "skill_code",
+                                  "confusao",
+                                  "explicacao"
+                                ],
+                                "properties": {
+                                  "skill_code": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ponteiros",
+                                      "memoria",
+                                      "algoritmos"
+                                    ]
+                                  },
+                                  "confusao": {
+                                    "type": "string"
+                                  },
+                                  "explicacao": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            },
+                            "por_que_comeca_aqui": {
+                              "type": "string"
+                            },
+                            "primeiro_foco": {
+                              "type": "string"
+                            },
+                            "dica": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "headers": {
+                    "Authorization": "Bearer {{$_ENV.OPENAI_API_KEY}}"
+                  }
+                },
+                "output": false
+              },
+              {
+                "name": "",
+                "module": "core",
+                "action": "condition",
+                "options": {
+                  "if": "{{api_explain.data.choices[0].finish_reason != 'stop' || api_explain.data.choices[0].message.refusal}}",
+                  "then": {
+                    "steps": [
+                      {
+                        "name": "",
+                        "module": "core",
+                        "action": "error",
+                        "options": {
+                          "message": "Resposta da IA incompleta ou recusada"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "outputType": "boolean"
+              },
+              {
+                "name": "explanation",
+                "module": "core",
+                "action": "setvalue",
+                "options": {
+                  "value": "{{api_explain.data.choices[0].message.content.parseJSON()}}"
+                },
+                "meta": [],
+                "outputType": "object",
+                "output": true
+              },
+              {
+                "name": "explanation_source",
+                "module": "core",
+                "action": "setvalue",
+                "options": {
+                  "value": "openai"
+                },
+                "meta": [],
+                "outputType": "text",
+                "output": true
+              }
+            ]
+          },
+          "catch": {
+            "steps": [
+              {
+                "name": "query_fallback",
+                "module": "dbupdater",
+                "action": "custom",
+                "options": {
+                  "connection": "db",
+                  "sql": {
+                    "query": "with first_step as (\n  select skill_code, activity_title, reason\n  from attempt_path_plan\n  where attempt_id = :P1\n  order by position\n  limit 1\n)\nselect jsonb_build_object(\n  'resumo', 'Sua trilha começa por ' || f.skill_code\n            || ', a habilidade em que você teve o menor acerto no diagnóstico.',\n  'confusoes', coalesce((\n    select jsonb_agg(jsonb_build_object(\n             'skill_code', s.code,\n             'confusao', o.feedback,\n             'explicacao', 'Você escolheu \"' || o.text || '\" em: ' || q.statement\n           ) order by q.id)\n    from diagnostic_answer da\n    join question q on q.id = da.question_id\n    join skill s on s.id = q.skill_id\n    join question_option o on o.id = da.option_id\n    where da.attempt_id = :P1 and not da.is_correct and o.feedback is not null\n  ), '[]'::jsonb),\n  'por_que_comeca_aqui', f.reason,\n  'primeiro_foco', f.activity_title,\n  'dica', 'Faça as atividades na ordem: cada uma usa o que a anterior treinou.'\n) as feedback\nfrom first_step f",
+                    "params": [
+                      {
+                        "name": ":P1",
+                        "value": "{{$_POST.attempt_id}}",
+                        "test": ""
+                      }
+                    ]
+                  }
+                },
+                "output": false,
+                "meta": [
+                  {
+                    "name": "feedback",
+                    "type": "object"
+                  }
+                ],
+                "outputType": "array",
+                "type": "dbcustom_query"
+              },
+              {
+                "name": "explanation",
+                "module": "core",
+                "action": "setvalue",
+                "options": {
+                  "value": "{{query_fallback[0].feedback}}"
+                },
+                "meta": [],
+                "outputType": "object",
+                "output": true
+              },
+              {
+                "name": "explanation_source",
+                "module": "core",
+                "action": "setvalue",
+                "options": {
+                  "value": "fallback"
+                },
+                "meta": [],
+                "outputType": "text",
+                "output": true
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "save_explanation",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "update user_path\nset reason = reason || jsonb_build_object('ai_explanation', :P2::jsonb,\n                                          'explanation_source', :P3::text)\nwhere id = :P1::int",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{insert_user_path[0].id}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{explanation.toJSON()}}",
+                "test": ""
+              },
+              {
+                "name": ":P3",
+                "value": "{{explanation_source}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "user_path_id",
+        "module": "core",
+        "action": "setvalue",
+        "options": {
+          "value": "{{insert_user_path[0].id}}"
+        },
+        "meta": [],
+        "outputType": "number",
+        "output": true
+      }
+    ]
+  }
+}

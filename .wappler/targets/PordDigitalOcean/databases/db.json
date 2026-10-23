@@ -1,0 +1,11 @@
+{
+  "direct": true,
+  "type": "postgres",
+  "connection": {
+    "host": "SEU_IP_DO_SERVIDOR",
+    "port": 9906,
+    "user": "db_user",
+    "password": "CHANGE_ME_DB_PASSWORD",
+    "database": "hacktonopenaitrilha4"
+  }
+}

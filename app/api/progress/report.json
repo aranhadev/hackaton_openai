@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "$_GET": []
+  },
+  "exec": {
+    "steps": [
+      {
+        "name": "",
+        "module": "auth",
+        "action": "restrict",
+        "options": {
+          "provider": "security_db"
+        }
+      },
+      {
+        "name": "query_path",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "with p as (\n  select id, creation_dt, reason from user_path\n  where user_id = :P1::int and is_active\n  order by id desc limit 1\n), s as (\n  select coalesce(ap.status, 'pending') as status\n  from user_path_step ups\n  join p on p.id = ups.user_path_id\n  left join activity_progress ap on ap.user_id = :P1::int and ap.activity_id = ups.activity_id\n)\nselect p.id as user_path_id, p.creation_dt as started_at,\n       (select count(*) from s)::int as total,\n       (select count(*) from s where status = 'done')::int as done,\n       (select count(*) from s where status = 'failed')::int as failed,\n       coalesce(round(100.0 * (select count(*) from s where status = 'done') / nullif((select count(*) from s), 0)), 0)::int as percent,\n       not exists (select 1 from s where status <> 'done') as finished,\n       p.reason\nfrom p",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "name": "user_path_id",
+            "type": "number"
+          },
+          {
+            "name": "started_at",
+            "type": "datetime"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "done",
+            "type": "number"
+          },
+          {
+            "name": "failed",
+            "type": "number"
+          },
+          {
+            "name": "percent",
+            "type": "number"
+          },
+          {
+            "name": "finished",
+            "type": "boolean"
+          },
+          {
+            "name": "reason",
+            "type": "object"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{!query_path[0]}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 404,
+                  "data": {
+                    "error": "Nenhuma trilha ativa"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "path",
+        "module": "core",
+        "action": "setvalue",
+        "options": {
+          "value": "{{query_path[0]}}"
+        },
+        "meta": [],
+        "outputType": "object",
+        "output": true
+      },
+      {
+        "name": "skills",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select sk.id as skill_id, sk.code as skill_code, sk.title as skill_title,\n       count(*)::int as total,\n       count(*) filter (where ap.status = 'done')::int as done,\n       count(*) filter (where ap.status = 'failed')::int as failed,\n       coalesce(sum(ap.attempts), 0)::int as attempts,\n       round(100.0 * count(*) filter (where ap.status = 'done') / count(*))::int as percent,\n       coalesce(max(a.level_n) filter (where ap.status = 'done'), 0)::int as level_reached\nfrom user_path_step ups\njoin activity a on a.id = ups.activity_id\njoin skill sk on sk.id = ups.skill_id\nleft join activity_progress ap on ap.user_id = :P1::int and ap.activity_id = ups.activity_id\nwhere ups.user_path_id = :P2::int\ngroup by sk.id, sk.code, sk.title, sk.sort_order\norder by sk.sort_order, sk.id",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{query_path[0].user_path_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "skill_id",
+            "type": "number"
+          },
+          {
+            "name": "skill_code",
+            "type": "text"
+          },
+          {
+            "name": "skill_title",
+            "type": "text"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "done",
+            "type": "number"
+          },
+          {
+            "name": "failed",
+            "type": "number"
+          },
+          {
+            "name": "attempts",
+            "type": "number"
+          },
+          {
+            "name": "percent",
+            "type": "number"
+          },
+          {
+            "name": "level_reached",
+            "type": "number"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      }
+    ]
+  }
+}

@@ -1,0 +1,336 @@
+{
+  "meta": {
+    "$_GET": [
+      {
+        "type": "number",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "attempt_id"
+      }
+    ]
+  },
+  "exec": {
+    "steps": [
+      {
+        "name": "",
+        "module": "auth",
+        "action": "restrict",
+        "options": {
+          "provider": "security_db"
+        }
+      },
+      {
+        "name": "query_attempt",
+        "module": "dbconnector",
+        "action": "single",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "SELECT",
+            "columns": [
+              {
+                "table": "diagnostic_attempt",
+                "column": "id"
+              },
+              {
+                "table": "diagnostic_attempt",
+                "column": "user_id"
+              },
+              {
+                "table": "diagnostic_attempt",
+                "column": "status"
+              }
+            ],
+            "params": [
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P1",
+                "value": "{{$_GET.attempt_id}}",
+                "test": ""
+              },
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P2",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              }
+            ],
+            "table": {
+              "name": "diagnostic_attempt"
+            },
+            "primary": "id",
+            "joins": [],
+            "wheres": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "id": "diagnostic_attempt.id",
+                  "field": "diagnostic_attempt.id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{$_GET.attempt_id}}",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                },
+                {
+                  "id": "diagnostic_attempt.user_id",
+                  "field": "diagnostic_attempt.user_id",
+                  "type": "double",
+                  "operator": "equal",
+                  "value": "{{security_db.identity}}",
+                  "data": {
+                    "table": "diagnostic_attempt",
+                    "column": "user_id",
+                    "type": "number"
+                  },
+                  "operation": "="
+                }
+              ],
+              "conditional": null,
+              "valid": true
+            },
+            "query": "select \"id\", \"user_id\", \"status\" from \"diagnostic_attempt\" where \"diagnostic_attempt\".\"id\" = ? and \"diagnostic_attempt\".\"user_id\" = ?"
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "type": "number",
+            "name": "id"
+          },
+          {
+            "type": "number",
+            "name": "user_id"
+          },
+          {
+            "type": "text",
+            "name": "status"
+          }
+        ],
+        "outputType": "object"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{!query_attempt}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 404,
+                  "data": {
+                    "error": "Tentativa não encontrada"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{query_attempt.status != 'in_progress'}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 409,
+                  "data": {
+                    "error": "Tentativa encerrada"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "query_next",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select q.id, q.statement, q.difficulty,\n       s.code as skill_code, s.title as skill_title,\n       (select count(*) from diagnostic_answer da where da.attempt_id = :P1)::int as answered,\n       (select count(*) from question where kind = 'diagnostic')::int as total\nfrom question q\njoin skill s on s.id = q.skill_id\nwhere q.kind = 'diagnostic'\n  and not exists (\n    select 1 from diagnostic_answer da\n    where da.attempt_id = :P1 and da.question_id = q.id\n  )\norder by q.id\nlimit 1",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{$_GET.attempt_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "id",
+            "type": "number"
+          },
+          {
+            "name": "statement",
+            "type": "text"
+          },
+          {
+            "name": "difficulty",
+            "type": "number"
+          },
+          {
+            "name": "skill_code",
+            "type": "text"
+          },
+          {
+            "name": "skill_title",
+            "type": "text"
+          },
+          {
+            "name": "answered",
+            "type": "number"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{!query_next[0]}}",
+          "then": {
+            "steps": [
+              {
+                "name": "done",
+                "module": "core",
+                "action": "setvalue",
+                "options": {
+                  "value": "{{true}}"
+                },
+                "meta": [],
+                "outputType": "boolean",
+                "output": true
+              }
+            ]
+          },
+          "else": {
+            "steps": [
+              {
+                "name": "query_options",
+                "module": "dbconnector",
+                "action": "select",
+                "options": {
+                  "connection": "db",
+                  "sql": {
+                    "type": "SELECT",
+                    "columns": [
+                      {
+                        "table": "question_option",
+                        "column": "id"
+                      },
+                      {
+                        "table": "question_option",
+                        "column": "text"
+                      },
+                      {
+                        "table": "question_option",
+                        "column": "position"
+                      }
+                    ],
+                    "params": [
+                      {
+                        "operator": "equal",
+                        "type": "expression",
+                        "name": ":P1",
+                        "value": "{{query_next[0].id}}",
+                        "test": ""
+                      }
+                    ],
+                    "table": {
+                      "name": "question_option"
+                    },
+                    "primary": "id",
+                    "joins": [],
+                    "wheres": {
+                      "condition": "AND",
+                      "rules": [
+                        {
+                          "id": "question_option.question_id",
+                          "field": "question_option.question_id",
+                          "type": "double",
+                          "operator": "equal",
+                          "value": "{{query_next[0].id}}",
+                          "data": {
+                            "table": "question_option",
+                            "column": "question_id",
+                            "type": "number"
+                          },
+                          "operation": "="
+                        }
+                      ],
+                      "conditional": null,
+                      "valid": true
+                    },
+                    "query": "select \"id\", \"text\", \"position\" from \"question_option\" where \"question_option\".\"question_id\" = ? order by \"position\" ASC",
+                    "orders": [
+                      {
+                        "table": "question_option",
+                        "column": "position",
+                        "direction": "ASC",
+                        "recid": 1
+                      }
+                    ]
+                  }
+                },
+                "output": true,
+                "meta": [
+                  {
+                    "type": "number",
+                    "name": "id"
+                  },
+                  {
+                    "type": "text",
+                    "name": "text"
+                  },
+                  {
+                    "type": "number",
+                    "name": "position"
+                  }
+                ],
+                "outputType": "array"
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      }
+    ]
+  }
+}

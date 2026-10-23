@@ -1,0 +1,192 @@
+{
+  "meta": {
+    "$_GET": []
+  },
+  "exec": {
+    "steps": [
+      {
+        "name": "",
+        "module": "auth",
+        "action": "restrict",
+        "options": {
+          "provider": "security_db"
+        }
+      },
+      {
+        "name": "path_rows",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select id, creation_dt, reason\nfrom user_path\nwhere user_id = :P1::int and is_active\norder by id desc\nlimit 1",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "name": "id",
+            "type": "number"
+          },
+          {
+            "name": "creation_dt",
+            "type": "datetime"
+          },
+          {
+            "name": "reason",
+            "type": "object"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "query_path",
+        "module": "core",
+        "action": "setvalue",
+        "options": {
+          "value": "{{path_rows[0]}}"
+        },
+        "meta": [],
+        "outputType": "object",
+        "output": true
+      },
+      {
+        "name": "query_steps",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select ups.position, ups.reason,\n       a.id as activity_id, a.title, a.level_n, a.kind, a.content, a.explanation, a.examshell_id,\n       s.code as skill_code, s.title as skill_title,\n       coalesce(ap.status, 'pending') as status, coalesce(ap.attempts, 0)::int as attempts, ap.completed_at,\n       pq.id as question_id, pq.statement as question,\n       (select json_agg(json_build_object('id', o.id, 'text', o.text, 'position', o.position) order by o.position)\n        from question_option o where o.question_id = pq.id) as options\nfrom user_path_step ups\njoin activity a on a.id = ups.activity_id\njoin skill s on s.id = ups.skill_id\nleft join activity_progress ap on ap.activity_id = a.id and ap.user_id = :P2::int\nleft join lateral (\n  select q.id, q.statement from question q\n  where q.kind = 'practice' and q.source_ref = 'activity:' || a.id\n  order by q.id limit 1\n) pq on true\nwhere ups.user_path_id = :P1::int\norder by ups.position",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{query_path.id}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "position",
+            "type": "number"
+          },
+          {
+            "name": "reason",
+            "type": "text"
+          },
+          {
+            "name": "activity_id",
+            "type": "number"
+          },
+          {
+            "name": "title",
+            "type": "text"
+          },
+          {
+            "name": "level_n",
+            "type": "number"
+          },
+          {
+            "name": "kind",
+            "type": "text"
+          },
+          {
+            "name": "content",
+            "type": "text"
+          },
+          {
+            "name": "explanation",
+            "type": "text"
+          },
+          {
+            "name": "examshell_id",
+            "type": "text"
+          },
+          {
+            "name": "skill_code",
+            "type": "text"
+          },
+          {
+            "name": "skill_title",
+            "type": "text"
+          },
+          {
+            "name": "status",
+            "type": "text"
+          },
+          {
+            "name": "attempts",
+            "type": "number"
+          },
+          {
+            "name": "completed_at",
+            "type": "datetime"
+          },
+          {
+            "name": "question_id",
+            "type": "number"
+          },
+          {
+            "name": "question",
+            "type": "text"
+          },
+          {
+            "name": "options",
+            "type": "array"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "total",
+        "module": "core",
+        "action": "setvalue",
+        "options": {
+          "value": "{{query_steps.count()}}"
+        },
+        "meta": [],
+        "outputType": "number",
+        "output": true
+      },
+      {
+        "name": "done",
+        "module": "core",
+        "action": "setvalue",
+        "options": {
+          "value": "{{query_steps.where('status', '==', 'done').count()}}"
+        },
+        "meta": [],
+        "outputType": "number",
+        "output": true
+      },
+      {
+        "name": "next",
+        "module": "core",
+        "action": "setvalue",
+        "options": {
+          "value": "{{query_steps.where('status', '!=', 'done')[0]}}"
+        },
+        "meta": [],
+        "outputType": "object",
+        "output": true
+      }
+    ]
+  }
+}

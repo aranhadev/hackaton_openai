@@ -1,0 +1,68 @@
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: 'CHANGE_ME_DB_PASSWORD'
+      POSTGRES_USER: 'db_user'
+      POSTGRES_DB: 'hacktonopenaitrilha4'
+    volumes:
+      - 'db-volume:/var/lib/postgresql/data'
+    ports:
+      - '9911:5432'
+    restart: 'always'
+    logging:
+      options:
+        max-file: '5'
+        max-size: '10m'
+    healthcheck:
+      test:
+        - 'CMD-SHELL'
+        - 'pg_isready -U db_user -d hacktonopenaitrilha4'
+      interval: '30s'
+      timeout: '20s'
+      retries: 5
+      start_period: '5s'
+    build:
+      context: '.'
+      dockerfile: 'db/Dockerfile'
+    networks:
+      proxy: ~
+  web:
+    depends_on:
+      db:
+        condition: 'service_healthy'
+    restart: 'always'
+    stdin_open: true
+    tty: true
+    logging:
+      options:
+        max-file: '5'
+        max-size: '10m'
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=wappler-compose_proxy'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_web.entrypoints=web'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_web.rule=Host(`hack_openai.aranha.dev`)'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_web-secure.entrypoints=websecure'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_web-secure.rule=Host(`hack_openai.aranha.dev`)'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_web-secure.tls=true'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_web-secure.tls.certresolver=leresolver'
+      - 'traefik.http.services.hacktonopenaitrilha4__porddigitalocean_web.loadbalancer.server.port=3000'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_www_web-secure.entrypoints=websecure'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_www_web-secure.rule=Host(`www.hack_openai.aranha.dev`)'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_www_web-secure.tls=true'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_www_web-secure.tls.certresolver=leresolver'
+      - 'traefik.http.middlewares.hacktonopenaitrilha4__porddigitalocean_www-redirect.redirectregex.regex=^https://www.hack_openai.aranha.dev/(.*)'
+      - 'traefik.http.middlewares.hacktonopenaitrilha4__porddigitalocean_www-redirect.redirectregex.replacement=https://hack_openai.aranha.dev/$${1}'
+      - 'traefik.http.middlewares.hacktonopenaitrilha4__porddigitalocean_www-redirect.redirectregex.permanent=true'
+      - 'traefik.http.routers.hacktonopenaitrilha4__porddigitalocean_www_web-secure.middlewares=hacktonopenaitrilha4__porddigitalocean_www-redirect'
+    networks:
+      proxy: ~
+    build:
+      context: '../../../'
+      dockerfile: '.wappler/targets/PordDigitalOcean/web/Dockerfile'
+volumes:
+  db-volume: ~
+networks:
+  proxy:
+    name: 'wappler-compose_proxy'
+    external: true

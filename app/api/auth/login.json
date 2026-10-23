@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "$_POST": [
+      {
+        "type": "text",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "username"
+      },
+      {
+        "type": "text",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "password"
+      },
+      {
+        "type": "boolean",
+        "name": "remember"
+      }
+    ]
+  },
+  "exec": {
+    "steps": {
+      "name": "identity",
+      "module": "auth",
+      "action": "login",
+      "options": {
+        "provider": "security_db"
+      },
+      "output": true,
+      "meta": []
+    }
+  }
+}

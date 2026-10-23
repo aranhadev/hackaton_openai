@@ -1,0 +1,34 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "page": "index",
+      "layout": "main",
+      "routeType": "page"
+    },
+    {
+      "path": "/design",
+      "page": "design",
+      "layout": "main",
+      "routeType": "page"
+    },
+    {
+      "path": "/diagnostico",
+      "page": "diagnostico",
+      "layout": "main",
+      "routeType": "page"
+    },
+    {
+      "path": "/trilha",
+      "page": "trilha",
+      "layout": "main",
+      "routeType": "page"
+    },
+    {
+      "path": "/progresso",
+      "page": "progresso",
+      "layout": "main",
+      "routeType": "page"
+    }
+  ]
+}

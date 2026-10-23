@@ -1,0 +1,12 @@
+{
+  "exec": {
+    "steps": {
+      "name": "",
+      "module": "auth",
+      "action": "logout",
+      "options": {
+        "provider": "security_db"
+      }
+    }
+  }
+}

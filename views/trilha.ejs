@@ -1,0 +1,225 @@
+<!-- Wappler include head-page="layouts/main" fontawesome_5="cdn" bootstrap5="local" is="dmx-app" id="trilha" appConnect="local" bootstrap_icons="local" components="{dmxFormatter:{}}" -->
+<meta name="ac:route" content="/trilha">
+<dmx-value id="page_title" value="Minha trilha"></dmx-value>
+
+<!-- Contrato das APIs: docs/contrato-trilha.md (path/current e activity/complete).
+     Passo atual = primeiro passo não concluído. O aluno pode abrir qualquer passo para ler,
+     mas só conclui do atual para trás. -->
+<dmx-serverconnect id="sc_path" url="/api/path/current"
+  dmx-on:unauthorized="precisa_login.setValue(true)"
+  dmx-on:error="erro.setValue('Não deu para carregar sua trilha.')"></dmx-serverconnect>
+
+<!-- A correção é no servidor: manda a alternativa escolhida (resp). Saída: answer[0], progress[0], reinforcement[].
+     No sucesso guarda o resultado em "ultimo" (o reload de path/current troca o passo aberto) e volta para o passo atual:
+     acertou → próximo passo; errou → o reforço do nível anterior, que o servidor colocou antes. -->
+<dmx-serverconnect id="sc_complete" url="/api/activity/complete" method="post" noload
+  dmx-bind:data="{activity_id: det.value.activity_id, option_id: resp.value}"
+  dmx-on:start="erro.setValue('')"
+  dmx-on:success="ultimo.setValue(sc_complete.data.answer[0] ? {activity_id: det.value.activity_id, title: det.value.title, ok: sc_complete.data.answer[0].is_correct, option_id: sc_complete.data.answer[0].option_id, feedback: sc_complete.data.answer[0].feedback, explanation: sc_complete.data.answer[0].explanation, reforco: sc_complete.data.reinforcement[0].title} : '');resp.setValue('');escolhido.setValue('');mostrar_expl.setValue(false);sc_path.load()"
+  dmx-on:unauthorized="precisa_login.setValue(true)"
+  dmx-on:invalid="erro.setValue(sc_complete.lastError.response.error || 'Escolha uma alternativa.')"
+  dmx-on:error="erro.setValue('Não deu para salvar. Tente de novo.')"></dmx-serverconnect>
+
+<dmx-value id="erro"></dmx-value>
+<!-- resp: alternativa marcada na prática · ultimo: resultado da última resposta -->
+<dmx-value id="resp"></dmx-value>
+<dmx-value id="ultimo"></dmx-value>
+<dmx-value id="precisa_login" dmx-bind:value="false"></dmx-value>
+<dmx-value id="mostrar_expl" dmx-bind:value="false"></dmx-value>
+<!-- escolhido: passo que o aluno clicou (vazio = segue o atual) -->
+<dmx-value id="escolhido"></dmx-value>
+<dmx-value id="total" dmx-bind:value="sc_path.data.query_steps.count()"></dmx-value>
+<dmx-value id="feitos" dmx-bind:value="sc_path.data.query_steps.where('status', 'done', '==').count()"></dmx-value>
+<dmx-value id="atual" dmx-bind:value="sc_path.data.query_steps.where('status', 'done', '!=')[0].position"></dmx-value>
+<dmx-value id="pos" dmx-bind:value="escolhido.value || atual.value || 1"></dmx-value>
+<dmx-value id="det" dmx-bind:value="sc_path.data.query_steps.where('position', pos.value, '==')[0]"></dmx-value>
+
+<div class="app-page">
+
+  <div class="app-callout is-danger" dmx-show="erro.value">
+    <i class="bi bi-exclamation-triangle"></i>
+    <div class="flex-grow-1" dmx-text="erro.value"></div>
+  </div>
+
+  <!-- Sem login: entra aqui mesmo (o login do /diagnostico já abre uma tentativa nova) -->
+  <div class="card app-card" dmx-show="precisa_login.value" style="max-width: 440px;">
+    <div>
+      <p class="app-eyebrow">Entrar</p>
+      <h2 class="app-section-title">Entre para ver sua trilha</h2>
+    </div>
+    <form is="dmx-serverconnect-form" id="form_login" method="post" action="/api/auth/login" class="d-flex flex-column gap-3"
+      dmx-on:start="erro.setValue('')"
+      dmx-on:success="precisa_login.setValue(false);form_login.reset();sc_me.load();sc_path.load()"
+      dmx-on:unauthorized="erro.setValue('Usuário ou senha incorretos.')">
+      <div>
+        <label class="form-label" for="login_username">Usuário</label>
+        <input class="form-control" id="login_username" name="username" required autocomplete="username">
+      </div>
+      <div>
+        <label class="form-label" for="login_password">Senha</label>
+        <input class="form-control" id="login_password" name="password" type="password" required autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary align-self-start" type="submit" dmx-bind:disabled="form_login.state.executing">Entrar</button>
+    </form>
+  </div>
+
+  <!-- Carregando -->
+  <div class="card app-card align-items-center py-5" dmx-show="sc_path.state.executing &amp;&amp; !sc_path.data.query_steps">
+    <div class="spinner-border text-primary" role="status"></div>
+  </div>
+
+  <!-- Sem trilha ativa -->
+  <div class="app-empty" dmx-show="sc_path.status == 200 &amp;&amp; !total.value">
+    <i class="bi bi-signpost-split"></i>
+    <strong class="d-block text-light mb-1">Você ainda não tem uma trilha</strong>
+    Faça o diagnóstico: ele monta uma sequência de atividades só para você.
+    <div class="mt-3"><a class="btn btn-primary" href="/diagnostico" internal="true"><i class="bi bi-play-fill me-1"></i>Fazer diagnóstico</a></div>
+  </div>
+
+  <div is="dmx-if" id="if_trilha" dmx-bind:condition="total.value &gt; 0" class="d-flex flex-column gap-3">
+
+    <div class="app-page-header">
+      <div>
+        <p class="app-eyebrow">Trilha personalizada</p>
+        <h1 class="app-title">Minha trilha</h1>
+        <p class="app-subtitle" dmx-text="feitos.value + ' de ' + total.value + ' atividades concluídas'"></p>
+      </div>
+      <a class="btn btn-ghost" href="/diagnostico" internal="true"><i class="bi bi-arrow-repeat me-1"></i>Refazer diagnóstico</a>
+    </div>
+
+    <div class="app-track"><div class="app-fill" dmx-style:width="(feitos.value / total.value * 100) + '%'"></div></div>
+
+    <!-- Explicação gravada no finish (user_path.reason.ai_explanation) -->
+    <div class="app-callout is-accent" dmx-show="sc_path.data.query_path.reason.ai_explanation.resumo">
+      <i class="bi bi-stars"></i>
+      <div>
+        <strong class="d-block mb-1" dmx-text="sc_path.data.query_path.reason.ai_explanation.resumo"></strong>
+        <span dmx-text="sc_path.data.query_path.reason.ai_explanation.dica"></span>
+      </div>
+    </div>
+
+    <!-- Trilha concluída -->
+    <div class="app-hero" dmx-show="feitos.value == total.value">
+      <p class="app-eyebrow">Parabéns</p>
+      <h2 class="app-title">Trilha concluída!</h2>
+      <p class="app-subtitle">Refaça o diagnóstico para ver o quanto você evoluiu e montar a próxima trilha.</p>
+      <div class="app-hero-actions"><a class="btn btn-primary btn-lg" href="/diagnostico" internal="true">Refazer diagnóstico</a></div>
+    </div>
+
+    <!-- Resultado da última resposta (fica até a próxima) -->
+    <div class="app-callout is-accent" dmx-show="ultimo.value.ok">
+      <i class="bi bi-check-circle"></i>
+      <div class="flex-grow-1">
+        <strong class="d-block" dmx-text="'Acertou: ' + ultimo.value.title"></strong>
+        <span style="white-space: pre-line;" dmx-text="ultimo.value.explanation"></span>
+      </div>
+      <button class="btn btn-sm btn-ghost align-self-start" type="button" aria-label="Fechar" dmx-on:click="ultimo.setValue('')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="app-callout is-danger" dmx-show="ultimo.value &amp;&amp; !ultimo.value.ok">
+      <i class="bi bi-x-circle"></i>
+      <div class="flex-grow-1">
+        <strong class="d-block" dmx-text="'Não foi dessa vez: ' + ultimo.value.title"></strong>
+        <span class="d-block" style="white-space: pre-line;" dmx-text="ultimo.value.feedback"></span>
+        <span class="d-block mt-1" dmx-show="ultimo.value.reforco" dmx-text="'Antes de tentar de novo, faça o reforço: ' + ultimo.value.reforco"></span>
+        <span class="d-block mt-1" dmx-hide="ultimo.value.reforco">Releia o desafio e tente de novo.</span>
+      </div>
+      <button class="btn btn-sm btn-ghost align-self-start" type="button" aria-label="Fechar" dmx-on:click="ultimo.setValue('')"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <div class="app-grid-side">
+
+      <!-- Lista de passos -->
+      <div class="card app-card">
+        <h2 class="app-section-title">Sequência</h2>
+        <ol class="app-steps">
+          <li class="app-step is-clickable" dmx-repeat:rep_steps="sc_path.data.query_steps" key="position"
+            dmx-class:is-done="status == 'done'"
+            dmx-class:is-current="position == atual.value"
+            dmx-class:is-locked="status != 'done' &amp;&amp; atual.value &amp;&amp; position &gt; atual.value"
+            dmx-class:is-selected="position == pos.value"
+            dmx-on:click="escolhido.setValue(position);mostrar_expl.setValue(false);resp.setValue('')">
+            <span class="app-step-dot"><i class="bi bi-check-lg" dmx-show="status == 'done'"></i><span dmx-hide="status == 'done'" dmx-text="position"></span></span>
+            <div class="app-step-body">
+              <p class="app-step-title" dmx-text="title"></p>
+              <p class="app-step-meta" dmx-text="skill_title + ' · nível ' + level_n + (status == 'failed' ? ' · errou a última' : '')"></p>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Atividade aberta (no celular aparece antes da lista) -->
+      <div class="card app-card order-first order-lg-0" dmx-show="det.value">
+        <div class="app-card-head">
+          <div class="d-flex flex-wrap gap-2">
+            <span class="app-pill is-info" dmx-text="det.value.skill_title"></span>
+            <span class="app-pill" dmx-text="'Nível ' + det.value.level_n"></span>
+            <span class="app-pill is-accent" dmx-show="det.value.status == 'done'"><i class="bi bi-check2"></i>Concluída</span>
+            <span class="app-pill is-warning" dmx-show="det.value.position == atual.value">Passo atual</span>
+            <span class="app-pill is-danger" dmx-show="det.value.status == 'failed'">Errou a última</span>
+          </div>
+          <span class="text-body-secondary" dmx-text="'Passo ' + det.value.position + ' de ' + total.value"></span>
+        </div>
+
+        <h2 class="app-title" dmx-text="det.value.title"></h2>
+
+        <div>
+          <p class="app-eyebrow mb-2">Desafio</p>
+          <p class="mb-0" style="white-space: pre-line; line-height: 1.65;" dmx-text="det.value.content"></p>
+        </div>
+
+        <div class="app-callout" dmx-show="det.value.reason">
+          <i class="bi bi-signpost"></i>
+          <div><strong class="d-block">Por que está na sua trilha</strong><span dmx-text="det.value.reason"></span></div>
+        </div>
+
+        <div class="app-callout is-accent" dmx-show="det.value.examshell_id">
+          <i class="bi bi-terminal"></i>
+          <div>Também dá para fazer no ExamShell: <code dmx-text="det.value.examshell_id"></code></div>
+        </div>
+
+        <div dmx-show="det.value.explanation">
+          <button class="btn btn-sm btn-ghost" type="button" dmx-on:click="mostrar_expl.setValue(!mostrar_expl.value)">
+            <i class="bi" dmx-class:bi-eye="!mostrar_expl.value" dmx-class:bi-eye-slash="mostrar_expl.value"></i>
+            <span dmx-text="mostrar_expl.value ? ' Esconder explicação' : ' Ver explicação'"></span>
+          </button>
+          <div class="app-callout mt-2" dmx-show="mostrar_expl.value">
+            <i class="bi bi-lightbulb"></i>
+            <div style="white-space: pre-line;" dmx-text="det.value.explanation"></div>
+          </div>
+        </div>
+
+        <!-- Prática: só no passo que ainda dá para responder (não concluído e não bloqueado) -->
+        <div class="d-flex flex-column gap-3" dmx-show="det.value.question_id &amp;&amp; det.value.status != 'done' &amp;&amp; det.value.position &lt;= atual.value">
+          <div>
+            <p class="app-eyebrow mb-2">Prática</p>
+            <p class="app-question mb-0" style="white-space: pre-line;" dmx-text="det.value.question"></p>
+          </div>
+          <div class="app-options">
+            <button class="app-option" type="button" dmx-repeat:rep_practice="det.value.options" key="id"
+              dmx-class:is-selected="resp.value == id"
+              dmx-class:is-wrong="!resp.value &amp;&amp; ultimo.value &amp;&amp; !ultimo.value.ok &amp;&amp; ultimo.value.option_id == id &amp;&amp; ultimo.value.activity_id == det.value.activity_id"
+              dmx-bind:disabled="sc_complete.state.executing" dmx-on:click="resp.setValue(id)">
+              <span class="app-option-key" dmx-text="$index == 0 ? 'A' : $index == 1 ? 'B' : $index == 2 ? 'C' : $index == 3 ? 'D' : 'E'"></span>
+              <span dmx-text="text"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap pt-2">
+          <div class="d-flex gap-2">
+            <button class="btn btn-ghost btn-sm" type="button" dmx-bind:disabled="pos.value &lt;= 1" dmx-on:click="escolhido.setValue(pos.value - 1);mostrar_expl.setValue(false);resp.setValue('')"><i class="bi bi-chevron-left"></i> Anterior</button>
+            <button class="btn btn-ghost btn-sm" type="button" dmx-bind:disabled="pos.value &gt;= total.value" dmx-on:click="escolhido.setValue(pos.value + 1);mostrar_expl.setValue(false);resp.setValue('')">Próxima <i class="bi bi-chevron-right"></i></button>
+          </div>
+          <!-- Com prática: "Responder" exige alternativa. Sem prática: conclui direto. -->
+          <button class="btn btn-primary" type="button" dmx-show="det.value.status != 'done' &amp;&amp; det.value.position &lt;= atual.value"
+            dmx-bind:disabled="sc_complete.state.executing || (det.value.question_id &amp;&amp; !resp.value)" dmx-on:click="sc_complete.load()">
+            <span class="spinner-border spinner-border-sm me-2" dmx-show="sc_complete.state.executing"></span><i class="bi bi-check2-circle me-1" dmx-hide="sc_complete.state.executing"></i><span dmx-text="det.value.question_id ? 'Responder' : 'Marcar como concluída'">Marcar como concluída</span>
+          </button>
+          <span class="text-body-secondary" dmx-show="det.value.status != 'done' &amp;&amp; det.value.position &gt; atual.value"><i class="bi bi-lock me-1"></i>Conclua o passo atual primeiro</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

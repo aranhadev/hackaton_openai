@@ -1,0 +1,19 @@
+services:
+  examshell:
+    build: .
+    container_name: examshell-rank02
+    environment:
+      EXAM_PASSWORD: ${EXAM_PASSWORD:-exam}
+      EXAMSHELL_PUBLIC_GIT_URL: ${EXAMSHELL_PUBLIC_GIT_URL:-git://${EXAMSHELL_HOST_IP:-localhost}:9418/exam.git}
+      TRILHA_API_URL: ${TRILHA_API_URL:-http://host.docker.internal:8100}
+      TRILHA_API_TIMEOUT: ${TRILHA_API_TIMEOUT:-10}
+      TRILHA_SOURCE: ${TRILHA_SOURCE:-examshell}
+    ports:
+      - "${EXAMSHELL_HOST_IP:-127.0.0.1}:2222:22"
+      - "${EXAMSHELL_HOST_IP:-127.0.0.1}:9418:9418"
+    volumes:
+      - exam-data:/var/lib/examshell
+    restart: unless-stopped
+
+volumes:
+  exam-data:

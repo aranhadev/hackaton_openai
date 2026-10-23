@@ -1,0 +1,492 @@
+{
+  "meta": {
+    "$_POST": [
+      {
+        "type": "number",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "activity_id"
+      },
+      {
+        "type": "number",
+        "name": "option_id"
+      },
+      {
+        "type": "boolean",
+        "name": "correct"
+      },
+      {
+        "type": "text",
+        "name": "source"
+      }
+    ]
+  },
+  "exec": {
+    "steps": [
+      {
+        "name": "",
+        "module": "auth",
+        "action": "restrict",
+        "options": {
+          "provider": "security_db"
+        }
+      },
+      {
+        "name": "query_step",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "select ups.id, ups.user_path_id, ups.position, ups.skill_id, a.level_n, a.title,\n       (select q.id from question q where q.kind = 'practice' and q.source_ref = 'activity:' || ups.activity_id order by q.id limit 1) as question_id\nfrom user_path up\njoin user_path_step ups on ups.user_path_id = up.id\njoin activity a on a.id = ups.activity_id\nwhere up.user_id = :P1::int and up.is_active and ups.activity_id = :P2::int\norder by up.id desc, ups.position\nlimit 1",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{$_POST.activity_id}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "name": "id",
+            "type": "number"
+          },
+          {
+            "name": "user_path_id",
+            "type": "number"
+          },
+          {
+            "name": "position",
+            "type": "number"
+          },
+          {
+            "name": "skill_id",
+            "type": "number"
+          },
+          {
+            "name": "level_n",
+            "type": "number"
+          },
+          {
+            "name": "title",
+            "type": "text"
+          },
+          {
+            "name": "question_id",
+            "type": "number"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{!query_step[0]}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 404,
+                  "data": {
+                    "error": "Atividade fora da trilha ativa"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{query_step[0].question_id && !($_POST.source == 'examshell' && $_POST.correct != null)}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "condition",
+                "options": {
+                  "if": "{{!$_POST.option_id}}",
+                  "then": {
+                    "steps": [
+                      {
+                        "name": "",
+                        "module": "core",
+                        "action": "response",
+                        "options": {
+                          "status": 400,
+                          "data": {
+                            "error": "Escolha uma alternativa"
+                          }
+                        },
+                        "output": true
+                      }
+                    ]
+                  }
+                },
+                "outputType": "boolean"
+              },
+              {
+                "name": "answer",
+                "module": "dbupdater",
+                "action": "custom",
+                "options": {
+                  "connection": "db",
+                  "sql": {
+                    "query": "select o.id as option_id, o.is_correct,\n       case when o.is_correct then null else o.feedback end as feedback,\n       case when o.is_correct then q.explanation end as explanation\nfrom question_option o\njoin question q on q.id = o.question_id\nwhere o.id = :P1::int and o.question_id = :P2::int",
+                    "params": [
+                      {
+                        "name": ":P1",
+                        "value": "{{$_POST.option_id}}",
+                        "test": ""
+                      },
+                      {
+                        "name": ":P2",
+                        "value": "{{query_step[0].question_id}}",
+                        "test": ""
+                      }
+                    ]
+                  }
+                },
+                "output": true,
+                "meta": [
+                  {
+                    "name": "option_id",
+                    "type": "number"
+                  },
+                  {
+                    "name": "is_correct",
+                    "type": "boolean"
+                  },
+                  {
+                    "name": "feedback",
+                    "type": "text"
+                  },
+                  {
+                    "name": "explanation",
+                    "type": "text"
+                  }
+                ],
+                "outputType": "array",
+                "type": "dbcustom_query"
+              },
+              {
+                "name": "",
+                "module": "core",
+                "action": "condition",
+                "options": {
+                  "if": "{{!answer[0]}}",
+                  "then": {
+                    "steps": [
+                      {
+                        "name": "",
+                        "module": "core",
+                        "action": "response",
+                        "options": {
+                          "status": 400,
+                          "data": {
+                            "error": "Alternativa não pertence à questão da atividade"
+                          }
+                        },
+                        "output": true
+                      }
+                    ]
+                  }
+                },
+                "outputType": "boolean"
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "progress",
+        "module": "dbupdater",
+        "action": "custom",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "query": "insert into activity_progress (user_id, activity_id, status, attempts, completed_at, source)\nvalues (:P1::int, :P2::int,\n        case when :P3::boolean then 'done' else 'failed' end,\n        1,\n        case when :P3::boolean then now() end,\n        :P4)\non conflict (user_id, activity_id) do update\nset status = excluded.status,\n    attempts = coalesce(activity_progress.attempts, 0) + 1,\n    completed_at = case when excluded.status = 'done' then coalesce(activity_progress.completed_at, now()) end,\n    source = excluded.source\nreturning activity_id, status, attempts, completed_at",
+            "params": [
+              {
+                "name": ":P1",
+                "value": "{{security_db.identity}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "value": "{{$_POST.activity_id}}",
+                "test": ""
+              },
+              {
+                "name": ":P3",
+                "value": "{{$_POST.source == 'examshell' && $_POST.correct != null ? ($_POST.correct == 'true' || $_POST.correct == true) : (query_step[0].question_id ? answer[0].is_correct : true)}}",
+                "test": ""
+              },
+              {
+                "name": ":P4",
+                "value": "{{$_POST.source.default('web')}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "activity_id",
+            "type": "number"
+          },
+          {
+            "name": "status",
+            "type": "text"
+          },
+          {
+            "name": "attempts",
+            "type": "number"
+          },
+          {
+            "name": "completed_at",
+            "type": "datetime"
+          }
+        ],
+        "outputType": "array",
+        "type": "dbcustom_query"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{progress[0].status == 'failed'}}",
+          "then": {
+            "steps": [
+              {
+                "name": "reinforcement",
+                "module": "dbupdater",
+                "action": "custom",
+                "options": {
+                  "connection": "db",
+                  "sql": {
+                    "query": "select r.id as activity_id, r.title, r.level_n,\n       exists (select 1 from user_path_step x where x.user_path_id = :P1::int and x.activity_id = r.id) as in_path\nfrom activity r\nwhere r.skill_id = :P2::int and r.level_n = :P3::int - 1\norder by r.id\nlimit 1",
+                    "params": [
+                      {
+                        "name": ":P1",
+                        "value": "{{query_step[0].user_path_id}}",
+                        "test": ""
+                      },
+                      {
+                        "name": ":P2",
+                        "value": "{{query_step[0].skill_id}}",
+                        "test": ""
+                      },
+                      {
+                        "name": ":P3",
+                        "value": "{{query_step[0].level_n}}",
+                        "test": ""
+                      }
+                    ]
+                  }
+                },
+                "output": true,
+                "meta": [
+                  {
+                    "name": "activity_id",
+                    "type": "number"
+                  },
+                  {
+                    "name": "title",
+                    "type": "text"
+                  },
+                  {
+                    "name": "level_n",
+                    "type": "number"
+                  },
+                  {
+                    "name": "in_path",
+                    "type": "boolean"
+                  }
+                ],
+                "outputType": "array",
+                "type": "dbcustom_query"
+              },
+              {
+                "name": "",
+                "module": "core",
+                "action": "condition",
+                "options": {
+                  "if": "{{reinforcement[0]}}",
+                  "then": {
+                    "steps": [
+                      {
+                        "name": "reopen_progress",
+                        "module": "dbupdater",
+                        "action": "custom",
+                        "options": {
+                          "connection": "db",
+                          "sql": {
+                            "query": "insert into activity_progress (user_id, activity_id, status, source)\nvalues (:P1::int, :P2::int, 'pending', :P3)\non conflict (user_id, activity_id) do update\nset status = 'pending', completed_at = null",
+                            "params": [
+                              {
+                                "name": ":P1",
+                                "value": "{{security_db.identity}}",
+                                "test": ""
+                              },
+                              {
+                                "name": ":P2",
+                                "value": "{{reinforcement[0].activity_id}}",
+                                "test": ""
+                              },
+                              {
+                                "name": ":P3",
+                                "value": "{{$_POST.source.default('web')}}",
+                                "test": ""
+                              }
+                            ]
+                          }
+                        },
+                        "output": false,
+                        "meta": [],
+                        "outputType": "array",
+                        "type": "dbcustom_query"
+                      },
+                      {
+                        "name": "",
+                        "module": "core",
+                        "action": "condition",
+                        "options": {
+                          "if": "{{!reinforcement[0].in_path}}",
+                          "then": {
+                            "steps": [
+                              {
+                                "name": "shift_steps",
+                                "module": "dbupdater",
+                                "action": "custom",
+                                "options": {
+                                  "connection": "db",
+                                  "sql": {
+                                    "query": "update user_path_step\nset position = -(position + 1)\nwhere user_path_id = :P1::int and position >= :P2::int",
+                                    "params": [
+                                      {
+                                        "name": ":P1",
+                                        "value": "{{query_step[0].user_path_id}}",
+                                        "test": ""
+                                      },
+                                      {
+                                        "name": ":P2",
+                                        "value": "{{query_step[0].position}}",
+                                        "test": ""
+                                      }
+                                    ]
+                                  }
+                                },
+                                "output": false,
+                                "meta": [],
+                                "outputType": "array",
+                                "type": "dbcustom_query"
+                              },
+                              {
+                                "name": "insert_reinforcement",
+                                "module": "dbupdater",
+                                "action": "custom",
+                                "options": {
+                                  "connection": "db",
+                                  "sql": {
+                                    "query": "insert into user_path_step (user_path_id, activity_id, skill_id, position, reason)\nvalues (:P1::int, :P2::int, :P3::int, :P4::int, 'reforço: errou ' || :P5)",
+                                    "params": [
+                                      {
+                                        "name": ":P1",
+                                        "value": "{{query_step[0].user_path_id}}",
+                                        "test": ""
+                                      },
+                                      {
+                                        "name": ":P2",
+                                        "value": "{{reinforcement[0].activity_id}}",
+                                        "test": ""
+                                      },
+                                      {
+                                        "name": ":P3",
+                                        "value": "{{query_step[0].skill_id}}",
+                                        "test": ""
+                                      },
+                                      {
+                                        "name": ":P4",
+                                        "value": "{{query_step[0].position}}",
+                                        "test": ""
+                                      },
+                                      {
+                                        "name": ":P5",
+                                        "value": "{{query_step[0].title}}",
+                                        "test": ""
+                                      }
+                                    ]
+                                  }
+                                },
+                                "output": false,
+                                "meta": [],
+                                "outputType": "array",
+                                "type": "dbcustom_query"
+                              },
+                              {
+                                "name": "unshift_steps",
+                                "module": "dbupdater",
+                                "action": "custom",
+                                "options": {
+                                  "connection": "db",
+                                  "sql": {
+                                    "query": "update user_path_step\nset position = -position\nwhere user_path_id = :P1::int and position < 0",
+                                    "params": [
+                                      {
+                                        "name": ":P1",
+                                        "value": "{{query_step[0].user_path_id}}",
+                                        "test": ""
+                                      }
+                                    ]
+                                  }
+                                },
+                                "output": false,
+                                "meta": [],
+                                "outputType": "array",
+                                "type": "dbcustom_query"
+                              }
+                            ]
+                          }
+                        },
+                        "outputType": "boolean"
+                      }
+                    ]
+                  }
+                },
+                "outputType": "boolean"
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      }
+    ]
+  }
+}

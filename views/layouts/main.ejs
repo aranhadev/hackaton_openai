@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR" data-bs-theme="dark">
+
+<head>
+  <base href="/">
+  <script src="/dmxAppConnect/dmxAppConnect.js"></script>
+  <meta charset="UTF-8">
+  <title>Trilha C</title>
+
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="/bootstrap/5/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/css/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="/dmxAppConnect/dmxRouting/dmxRouting.js" defer></script>
+  <script src="/dmxAppConnect/dmxFormatter/dmxFormatter.js" defer></script>
+  <script src="/dmxAppConnect/dmxBrowser/dmxBrowser.js" defer></script>
+</head>
+
+<body is="dmx-app" id="main">
+
+  <!-- Aluno logado: sc_me.data.query_me vazio = deslogado. Os logins das páginas chamam sc_me.load() no sucesso. -->
+  <dmx-serverconnect id="sc_me" url="/api/auth/me"></dmx-serverconnect>
+  <dmx-serverconnect id="sc_logout" url="/api/auth/logout" noload dmx-on:done="browser_main.goto('/')"></dmx-serverconnect>
+  <div is="dmx-browser" id="browser_main"></div>
+
+  <!-- Sidebar (desktop). Link novo: copie um <a>, troque href/ícone e o nome no content.includes(...).
+       Os itens "disabled" viram links ativos quando a página existir. -->
+  <aside class="app-sidebar d-none d-lg-flex">
+    <a class="app-brand" href="/" internal="true">
+      <span class="app-brand-mark">C</span>
+      <span>
+        <span class="app-brand-name">Trilha C</span>
+        <small>Trilha personalizada</small>
+      </span>
+    </a>
+    <nav class="app-nav">
+      <a class="<%= content == '/index' ? 'active' : '' %>" href="/" internal="true"><i class="bi bi-grid-1x2-fill"></i>Início</a>
+      <a class="<%= content.includes('diagnostico') ? 'active' : '' %>" href="/diagnostico" internal="true"><i class="bi bi-clipboard-check"></i>Diagnóstico</a>
+      <a class="<%= content.includes('trilha') ? 'active' : '' %>" href="/trilha" internal="true"><i class="bi bi-signpost-split"></i>Minha trilha</a>
+      <a class="<%= content.includes('progresso') ? 'active' : '' %>" href="/progresso" internal="true"><i class="bi bi-graph-up-arrow"></i>Progresso</a>
+    </nav>
+    <div class="app-sidebar-foot">Hackathon OpenAI · Trilha 4</div>
+  </aside>
+
+  <!-- Topbar: o título vem de <dmx-value id="page_title"> dentro de cada página -->
+  <header class="app-topbar">
+    <h2 dmx-text="content.page_title.value || 'Trilha C'">Trilha C</h2>
+    <div class="app-actions">
+      <button class="app-icon-btn" type="button" aria-label="Notificações"><i class="bi bi-bell"></i></button>
+      <div class="app-profile" dmx-show="sc_me.data.query_me.id">
+        <span class="app-profile-meta d-none d-sm-block">
+          <strong dmx-text="sc_me.data.query_me.name || sc_me.data.query_me.username">Aluno</strong>
+          <small dmx-text="'@' + sc_me.data.query_me.username">Cadete</small>
+        </span>
+        <span class="app-avatar" dmx-text="(sc_me.data.query_me.name || sc_me.data.query_me.username || '?').substr(0, 2).uppercase()">AL</span>
+        <button class="btn btn-sm btn-ghost d-none d-lg-inline-flex" type="button" dmx-on:click="sc_logout.load()" dmx-bind:disabled="sc_logout.state.executing"><i class="bi bi-box-arrow-right me-1"></i>Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main is="dmx-view" id="content">
+    <%- await include(content, locals); %>
+  </main>
+
+  <!-- Bottom nav (mobile): mesmos links do sidebar -->
+  <nav class="app-bottom-nav d-lg-none d-flex justify-content-around align-items-center">
+    <a class="<%= content == '/index' ? 'active' : '' %>" href="/" internal="true"><i class="bi bi-grid-1x2-fill"></i>Início</a>
+    <a class="<%= content.includes('diagnostico') ? 'active' : '' %>" href="/diagnostico" internal="true"><i class="bi bi-clipboard-check"></i>Diagnóstico</a>
+    <a class="<%= content.includes('trilha') ? 'active' : '' %>" href="/trilha" internal="true"><i class="bi bi-signpost-split"></i>Trilha</a>
+    <a class="<%= content.includes('progresso') ? 'active' : '' %>" href="/progresso" internal="true"><i class="bi bi-graph-up-arrow"></i>Progresso</a>
+    <a href="#" dmx-show="sc_me.data.query_me.id" dmx-on:click.prevent="sc_logout.load()"><i class="bi bi-box-arrow-right"></i>Sair</a>
+  </nav>
+
+  <script src="/bootstrap/5/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

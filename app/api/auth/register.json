@@ -1,0 +1,200 @@
+{
+  "meta": {
+    "$_POST": [
+      {
+        "type": "text",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "username"
+      },
+      {
+        "type": "text",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "name"
+      },
+      {
+        "type": "text",
+        "options": {
+          "rules": {
+            "core:required": {}
+          }
+        },
+        "name": "password"
+      }
+    ]
+  },
+  "exec": {
+    "steps": [
+      {
+        "name": "query_existing",
+        "module": "dbconnector",
+        "action": "single",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "SELECT",
+            "columns": [
+              {
+                "table": "user",
+                "column": "id"
+              }
+            ],
+            "params": [
+              {
+                "operator": "equal",
+                "type": "expression",
+                "name": ":P1",
+                "value": "{{$_POST.username}}",
+                "test": ""
+              }
+            ],
+            "table": {
+              "name": "user"
+            },
+            "primary": "id",
+            "joins": [],
+            "wheres": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "id": "user.username",
+                  "field": "user.username",
+                  "type": "string",
+                  "operator": "equal",
+                  "value": "{{$_POST.username}}",
+                  "data": {
+                    "table": "user",
+                    "column": "username",
+                    "type": "text"
+                  },
+                  "operation": "="
+                }
+              ],
+              "conditional": null,
+              "valid": true
+            },
+            "query": "select \"id\" from \"user\" where \"user\".\"username\" = ?"
+          }
+        },
+        "output": false,
+        "meta": [
+          {
+            "type": "number",
+            "name": "id"
+          }
+        ],
+        "outputType": "object"
+      },
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{query_existing}}",
+          "then": {
+            "steps": [
+              {
+                "name": "",
+                "module": "core",
+                "action": "response",
+                "options": {
+                  "status": 409,
+                  "data": {
+                    "error": "Username já está em uso"
+                  }
+                },
+                "output": true
+              }
+            ]
+          }
+        },
+        "outputType": "boolean"
+      },
+      {
+        "name": "pwd",
+        "module": "crypto",
+        "action": "passwordHash",
+        "options": {
+          "algo": "argon2id",
+          "password": "{{$_POST.password}}"
+        },
+        "outputType": "text"
+      },
+      {
+        "name": "insert_user",
+        "module": "dbupdater",
+        "action": "insert",
+        "options": {
+          "connection": "db",
+          "sql": {
+            "type": "insert",
+            "values": [
+              {
+                "table": "user",
+                "column": "username",
+                "type": "text",
+                "value": "{{$_POST.username}}"
+              },
+              {
+                "table": "user",
+                "column": "name",
+                "type": "text",
+                "value": "{{$_POST.name}}"
+              },
+              {
+                "table": "user",
+                "column": "hash",
+                "type": "text",
+                "value": "{{pwd}}"
+              }
+            ],
+            "table": "user",
+            "returning": "id",
+            "query": "insert into \"user\" (\"username\", \"name\", \"hash\") values (?, ?, ?)",
+            "params": [
+              {
+                "name": ":P1",
+                "type": "expression",
+                "value": "{{$_POST.username}}",
+                "test": ""
+              },
+              {
+                "name": ":P2",
+                "type": "expression",
+                "value": "{{$_POST.name}}",
+                "test": ""
+              },
+              {
+                "name": ":P3",
+                "type": "expression",
+                "value": "{{pwd}}",
+                "test": ""
+              }
+            ]
+          }
+        },
+        "output": true,
+        "meta": [
+          {
+            "name": "identity",
+            "type": "text"
+          },
+          {
+            "name": "affected",
+            "type": "number"
+          }
+        ]
+      }
+    ]
+  },
+  "usedModules": {
+    "argon2": "^0.40.3"
+  }
+}

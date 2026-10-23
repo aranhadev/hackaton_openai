@@ -1,0 +1,14 @@
+node_modules
+.svn
+.env
+**/.DS_Store
+# segredos (OPENAI_API_KEY)
+app/config/config.json
+.wappler/targets/*/app/config/config.json
+
+# ExamShell
+examshell/.env
+examshell/data/
+
+# dumps de banco
+**/db_init/db_save.sql

@@ -1,0 +1,101 @@
+{
+  "exec": {
+    "steps": [
+      {
+        "name": "",
+        "module": "core",
+        "action": "condition",
+        "options": {
+          "if": "{{security_db.identity}}",
+          "then": {
+            "steps": {
+              "name": "query_me",
+              "module": "dbconnector",
+              "action": "single",
+              "options": {
+                "connection": "db",
+                "sql": {
+                  "type": "SELECT",
+                  "columns": [
+                    {
+                      "table": "user",
+                      "column": "id"
+                    },
+                    {
+                      "table": "user",
+                      "column": "name"
+                    },
+                    {
+                      "table": "user",
+                      "column": "username"
+                    }
+                  ],
+                  "params": [
+                    {
+                      "operator": "equal",
+                      "type": "expression",
+                      "name": ":P1",
+                      "value": "{{security_db.identity}}",
+                      "test": ""
+                    }
+                  ],
+                  "table": {
+                    "name": "user"
+                  },
+                  "primary": "id",
+                  "joins": [],
+                  "wheres": {
+                    "condition": "AND",
+                    "rules": [
+                      {
+                        "id": "user.id",
+                        "field": "user.id",
+                        "type": "double",
+                        "operator": "equal",
+                        "value": "{{security_db.identity}}",
+                        "data": {
+                          "table": "user",
+                          "column": "id",
+                          "type": "number",
+                          "columnObj": {
+                            "type": "increments",
+                            "default": "",
+                            "primary": true,
+                            "unique": true,
+                            "nullable": false,
+                            "name": "id"
+                          }
+                        },
+                        "operation": "="
+                      }
+                    ],
+                    "conditional": null,
+                    "valid": true
+                  },
+                  "query": "select \"id\", \"name\", \"username\" from \"user\" where \"user\".\"id\" = ?"
+                }
+              },
+              "output": true,
+              "meta": [
+                {
+                  "type": "number",
+                  "name": "id"
+                },
+                {
+                  "type": "text",
+                  "name": "name"
+                },
+                {
+                  "type": "text",
+                  "name": "username"
+                }
+              ],
+              "outputType": "object"
+            }
+          }
+        },
+        "outputType": "boolean"
+      }
+    ]
+  }
+}
